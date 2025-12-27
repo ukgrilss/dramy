@@ -48,11 +48,11 @@ export default async function handler(req, res) {
             let planSlug = 'monthly'
 
             // 4. LOOKUP INTENT ( The "Memory" System )
-            // We search who generated this PIX ID
+            // We search who generated this PIX ID (Using ilike for case-insensitivity)
             const { data: intent, error: intentError } = await supabase
                 .from('payment_intents')
                 .select('*')
-                .eq('transaction_id', txId)
+                .ilike('transaction_id', txId) // Changed from eq to ilike
                 .single()
 
             if (intent) {
