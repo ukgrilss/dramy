@@ -1,0 +1,22 @@
+-----------------------------------------------------------------------
+COPIE E COLE ESSES DADOS NA GG CHECKOUT
+-----------------------------------------------------------------------
+
+1. URL DO WEBHOOK:
+https://qlylsucoanjohwrkkroq.supabase.co/rest/v1/rpc/handle_gg_webhook
+
+2. AUTHENTICATION / HEADERS (Cabeçalhos):
+(Você precisa adicionar isso para funcionar)
+
+Nome (Key): apikey
+Valor (Value): eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFseWxzdWNvYW5qb2h3cmtrcm9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMTA1MjksImV4cCI6MjA4MTU4NjUyOX0.zRjSf9Ynyvv-_H09a5IbeXVQLEdodZTNGd-mz8KLZjM
+
+-----------------------------------------------------------------------
+O QUE FALTA FAZER?
+-----------------------------------------------------------------------
+1. Volte no Supabase > SQL Editor.
+2. Abra o arquivo 'database/GG_WEBHOOK_SETUP.sql'.
+3. Eu JÁ COLOQUEI o ID do seu produto lá ('8g6ug9Vr...').
+4. É só clicar em "RUN".
+
+Pronto! Seu site está integrado.
