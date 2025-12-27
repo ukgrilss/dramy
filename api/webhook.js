@@ -2,22 +2,32 @@
 import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req, res) {
-    // 1. Allow GET for Browser verification
+    // 1. GET Request: Browser Check + Diagnostic
     if (req.method === 'GET') {
-        return res.status(200).json({
+        const hasUrl = !!process.env.VITE_SUPABASE_URL
+        const hasKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+
+        const statusData = {
             status: 'online',
-            message: 'Webhook is active and ready for payments.'
-        })
+            environment_check: {
+                VITE_SUPABASE_URL: hasUrl ? 'OK' : 'MISSING',
+                SUPABASE_SERVICE_ROLE_KEY: hasKey ? 'OK' : 'MISSING (CRITICAL)'
+            },
+            message: hasKey
+                ? 'System Healthy. Ready for payments.'
+                : 'SYSTEM ERROR: Please add SUPABASE_SERVICE_ROLE_KEY to Vercel Settings.'
+        }
+
+        return res.status(200).json(statusData)
     }
 
-    // 2. Block non-POST for safety
+    // 2. Block non-POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' })
     }
 
     try {
         const supabaseUrl = process.env.VITE_SUPABASE_URL
-        // SERVICE_ROLE_KEY is required for Admin actions (logging, approving)
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
         if (!supabaseUrl || !supabaseServiceKey) {
@@ -28,8 +38,7 @@ export default async function handler(req, res) {
         const supabase = createClient(supabaseUrl, supabaseServiceKey)
         const paymentData = req.body
 
-        // 3. LOG RAW REQUEST (If logs table exists)
-        // We use a try-catch for the log insert so it doesn't crash the main flow if table is missing
+        // 3. LOG REQUEST (Try/Catch to avoid crash if table missing)
         try {
             await supabase.from('webhook_logs').insert({
                 method: 'POST',
@@ -38,19 +47,15 @@ export default async function handler(req, res) {
                 status: 'received'
             })
         } catch (logErr) {
-            console.warn('Log failed (table might be missing):', logErr.message)
+            console.warn('Log failed:', logErr.message)
         }
 
-        // 4. CHECK PAYMENT STATUS
-        // PushinPay usually sends { status: 'paid' } or { status: 'approved' }
-        // We check loosely to catch variations
+        // 4. CHECK PAYMENT
         const isPaid = paymentData.status === 'paid' ||
             paymentData.status === 'approved' ||
             paymentData.status === 'COMPLETED'
 
         if (isPaid) {
-            // Extract Email
-            // Priority: metadata > payer_email > customer.email
             const userEmail = paymentData.metadata?.email ||
                 paymentData.payer_email ||
                 paymentData.customer?.email
@@ -58,11 +63,9 @@ export default async function handler(req, res) {
             const planSlug = paymentData.metadata?.plan_slug || 'monthly'
             const txId = paymentData.id || `tx_${Date.now()}`
 
-            if (!userEmail) {
-                throw new Error('Email not found in payload')
-            }
+            if (!userEmail) throw new Error('Email not found in payload')
 
-            // CALL DATABASE RPC TO APPROVE
+            // APPROVE
             const { error } = await supabase.rpc('handle_payment_webhook', {
                 p_email: userEmail,
                 p_plan_slug: planSlug,
@@ -71,7 +74,7 @@ export default async function handler(req, res) {
 
             if (error) throw error
 
-            // Update Log
+            // Log Success
             try {
                 await supabase.from('webhook_logs').insert({
                     status: 'success_approved',
@@ -80,7 +83,13 @@ export default async function handler(req, res) {
             } catch (e) { }
 
         } else {
-            console.log('Payment not approved yet:', paymentData.status)
+            // Log Ignore
+            try {
+                await supabase.from('webhook_logs').insert({
+                    status: 'ignored_status',
+                    payload: { status: paymentData?.status }
+                })
+            } catch (e) { }
         }
 
         return res.status(200).json({ success: true })
