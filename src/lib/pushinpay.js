@@ -16,7 +16,7 @@ export const PushinPay = {
                 },
                 body: JSON.stringify({
                     value: amountInCents,
-                    webhook_url: 'https://seusite.com/api/webhook/pushinpay' // Placeholder, won't work on localhost
+                    webhook_url: 'https://dramy.com.br/api/webhook'
                 })
             })
 
