@@ -2,26 +2,17 @@
 import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req, res) {
-    // 1. GET Request: Browser Check + Diagnostic
+    // 1. GET Request: Browser Check for Vercel Env Vars
     if (req.method === 'GET') {
-        const hasUrl = !!process.env.VITE_SUPABASE_URL
-        const hasKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY
-
-        const statusData = {
+        return res.status(200).json({
             status: 'online',
-            environment_check: {
-                VITE_SUPABASE_URL: hasUrl ? 'OK' : 'MISSING',
-                SUPABASE_SERVICE_ROLE_KEY: hasKey ? 'OK' : 'MISSING (CRITICAL)'
-            },
-            message: hasKey
-                ? 'System Healthy. Ready for payments.'
-                : 'SYSTEM ERROR: Please add SUPABASE_SERVICE_ROLE_KEY to Vercel Settings.'
-        }
-
-        return res.status(200).json(statusData)
+            env_check: {
+                VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL ? 'OK' : 'MISSING',
+                SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY ? 'OK' : 'MISSING'
+            }
+        })
     }
 
-    // 2. Block non-POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' })
     }
@@ -38,34 +29,58 @@ export default async function handler(req, res) {
         const supabase = createClient(supabaseUrl, supabaseServiceKey)
         const paymentData = req.body
 
-        // 3. LOG REQUEST (Try/Catch to avoid crash if table missing)
+        // PushinPay sends 'id' as the Transaction ID
+        const txId = paymentData.id || paymentData.data?.id
+
+        // 3. LOG RAW REQUEST (Crucial for debugging)
         try {
             await supabase.from('webhook_logs').insert({
                 method: 'POST',
                 payload: paymentData,
-                headers: req.headers || {},
-                status: 'received'
+                status: 'received_v3_final'
             })
-        } catch (logErr) {
-            console.warn('Log failed:', logErr.message)
-        }
+        } catch (e) { }
 
-        // 4. CHECK PAYMENT
-        const isPaid = paymentData.status === 'paid' ||
-            paymentData.status === 'approved' ||
-            paymentData.status === 'COMPLETED'
+        const isPaid = paymentData.status === 'paid' || paymentData.status === 'approved'
 
-        if (isPaid) {
-            const userEmail = paymentData.metadata?.email ||
-                paymentData.payer_email ||
-                paymentData.customer?.email
+        if (isPaid && txId) {
+            let userEmail = null
+            let planSlug = 'monthly'
 
-            const planSlug = paymentData.metadata?.plan_slug || 'monthly'
-            const txId = paymentData.id || `tx_${Date.now()}`
+            // 4. LOOKUP INTENT ( The "Memory" System )
+            // We search who generated this PIX ID
+            const { data: intent, error: intentError } = await supabase
+                .from('payment_intents')
+                .select('*')
+                .eq('transaction_id', txId)
+                .single()
 
-            if (!userEmail) throw new Error('Email not found in payload')
+            if (intent) {
+                userEmail = intent.email
+                planSlug = intent.plan_slug
 
-            // APPROVE
+                // Log Success Finding User
+                await supabase.from('webhook_logs').insert({
+                    status: 'intent_found',
+                    payload: { txId, email: userEmail, plan: planSlug }
+                })
+
+            } else {
+                // Log Failure Finding User
+                await supabase.from('webhook_logs').insert({
+                    status: 'intent_missing',
+                    payload: { txId, error: intentError?.message }
+                })
+
+                // Fallback: Try to find email in metadata (usually stripped by Gateway, but worth a try)
+                userEmail = paymentData.metadata?.email || paymentData.payer_email
+            }
+
+            if (!userEmail) {
+                throw new Error(`CRITICAL: Could not identify user for Payment ID ${txId}. Intent missing and no email in payload.`)
+            }
+
+            // 5. APPROVE ACCESS
             const { error } = await supabase.rpc('handle_payment_webhook', {
                 p_email: userEmail,
                 p_plan_slug: planSlug,
@@ -74,28 +89,26 @@ export default async function handler(req, res) {
 
             if (error) throw error
 
-            // Log Success
-            try {
-                await supabase.from('webhook_logs').insert({
-                    status: 'success_approved',
-                    payload: { userEmail, planSlug, txId }
-                })
-            } catch (e) { }
+            // Log Final Success
+            await supabase.from('webhook_logs').insert({
+                status: 'success_approved_final',
+                payload: { email: userEmail, txId }
+            })
 
-        } else {
-            // Log Ignore
-            try {
-                await supabase.from('webhook_logs').insert({
-                    status: 'ignored_status',
-                    payload: { status: paymentData?.status }
-                })
-            } catch (e) { }
         }
 
         return res.status(200).json({ success: true })
 
     } catch (err) {
         console.error('Webhook Error:', err)
+        // Log Crash
+        try {
+            const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+            await supabase.from('webhook_logs').insert({
+                status: 'function_crash',
+                error_message: err.message
+            })
+        } catch (e) { }
         return res.status(500).json({ error: err.message })
     }
 }
