@@ -93,6 +93,18 @@ export default function PaymentModal({ plan, onClose }) {
           - subscription_active: false (not active yet)
         */
         if (user) {
+            // ⚡ Save Intent for Webhook Lookup
+            if (data?.id) {
+                await supabase
+                    .from('payment_intents')
+                    .insert({
+                        transaction_id: data.id,
+                        user_id: user.id,
+                        email: user.email,
+                        plan_slug: plan.slug
+                    })
+            }
+
             await supabase
                 .from('profiles')
                 .update({
