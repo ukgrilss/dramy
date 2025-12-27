@@ -1,50 +1,90 @@
+
 import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req, res) {
+    // 1. Allow GET for Browser verification
+    if (req.method === 'GET') {
+        return res.status(200).json({
+            status: 'online',
+            message: 'Webhook is active and ready for payments.'
+        })
+    }
+
+    // 2. Block non-POST for safety
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' })
     }
 
     try {
         const supabaseUrl = process.env.VITE_SUPABASE_URL
-        // NOTE: Function needs SERVICE_ROLE to bypass RLS and execute Admin RPCs
-        // User must add SUPABASE_SERVICE_ROLE_KEY to Vercel Env Vars
+        // SERVICE_ROLE_KEY is required for Admin actions (logging, approving)
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
         if (!supabaseUrl || !supabaseServiceKey) {
-            console.error('Missing Supabase Config')
-            return res.status(500).json({ error: 'Server Config Error' })
+            console.error('SERVER ERROR: Missing Env Vars')
+            return res.status(500).json({ error: 'Server Config Error: Missing Service Key' })
         }
 
         const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-        // Parse request body (PushinPay sends detailed JSON)
         const paymentData = req.body
 
-        // Simple mapping: if paid, call Supabase RPC
-        // PushinPay typically sends "status": "paid"
-        if (paymentData.status === 'paid' || paymentData.status === 'approved') {
-            // Extract relevant data (adjust based on actual PushinPay payload)
-            // Usually they send 'metadata' or 'payer' email
-            // We'll fall back to searching user by internal ID if transaction ID matches
-            // But for now, let's assume we pass the email in payload or we call the universal webhook
+        // 3. LOG RAW REQUEST (If logs table exists)
+        // We use a try-catch for the log insert so it doesn't crash the main flow if table is missing
+        try {
+            await supabase.from('webhook_logs').insert({
+                method: 'POST',
+                payload: paymentData,
+                headers: req.headers || {},
+                status: 'received'
+            })
+        } catch (logErr) {
+            console.warn('Log failed (table might be missing):', logErr.message)
+        }
 
-            // FOR ROBUSTNESS: We call the RPC we defined earlier.
-            // We need to map the incoming JSON to what our RPC expects.
+        // 4. CHECK PAYMENT STATUS
+        // PushinPay usually sends { status: 'paid' } or { status: 'approved' }
+        // We check loosely to catch variations
+        const isPaid = paymentData.status === 'paid' ||
+            paymentData.status === 'approved' ||
+            paymentData.status === 'COMPLETED'
 
-            // NOTE: This is a proxy. In a real scenario, you'd map fields carefully.
-            // For this "One-Click" request, we'll try to forward the payload.
+        if (isPaid) {
+            // Extract Email
+            // Priority: metadata > payer_email > customer.email
+            const userEmail = paymentData.metadata?.email ||
+                paymentData.payer_email ||
+                paymentData.customer?.email
 
+            const planSlug = paymentData.metadata?.plan_slug || 'monthly'
+            const txId = paymentData.id || `tx_${Date.now()}`
+
+            if (!userEmail) {
+                throw new Error('Email not found in payload')
+            }
+
+            // CALL DATABASE RPC TO APPROVE
             const { error } = await supabase.rpc('handle_payment_webhook', {
-                p_email: paymentData.payer_email || paymentData.customer?.email,
-                p_plan_slug: paymentData.metadata?.plan_slug || 'monthly', // default
-                p_transaction_id: paymentData.id
+                p_email: userEmail,
+                p_plan_slug: planSlug,
+                p_transaction_id: txId
             })
 
             if (error) throw error
+
+            // Update Log
+            try {
+                await supabase.from('webhook_logs').insert({
+                    status: 'success_approved',
+                    payload: { userEmail, planSlug, txId }
+                })
+            } catch (e) { }
+
+        } else {
+            console.log('Payment not approved yet:', paymentData.status)
         }
 
         return res.status(200).json({ success: true })
+
     } catch (err) {
         console.error('Webhook Error:', err)
         return res.status(500).json({ error: err.message })
