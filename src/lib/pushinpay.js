@@ -16,7 +16,15 @@ export const PushinPay = {
                 },
                 body: JSON.stringify({
                     value: amountInCents,
-                    webhook_url: 'https://dramy.com.br/api/webhook'
+                    webhook_url: 'https://dramy.com.br/api/webhook',
+                    metadata: {
+                        email: userEmail,
+                        plan_slug: 'monthly', // Default, but can be dynamic if passed
+                        app_name: 'dramy'
+                    },
+                    payer: {
+                        email: userEmail
+                    }
                 })
             })
 
