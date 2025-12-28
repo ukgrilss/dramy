@@ -332,10 +332,10 @@ export default function UserManagement() {
                             handleAutoReprocess(row.email, e)
                         }}
                         disabled={reprocessing}
-                        className="p-1.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors disabled:opacity-50 relative z-50 cursor-pointer"
+                        className="px-3 py-1.5 text-xs font-bold bg-white text-black hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 relative z-50 cursor-pointer shadow-lg border border-white"
                         title="Reprocessar Último Pagamento (Automático)"
                     >
-                        <RefreshCw className={`w-4 h-4 ${reprocessing ? 'animate-spin' : ''}`} />
+                        {reprocessing ? 'Processando...' : 'REPROCESSAR (TESTE)'}
                     </button>
                     <button
                         type="button"
