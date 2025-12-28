@@ -1,251 +1,106 @@
 
 import { createClient } from '@supabase/supabase-js'
+import { sendUtmifyOrder, formatStatsDate } from './services/utmify.js'
 
 export default async function handler(req, res) {
-    // 1. GET Request: Browser Check for Vercel Env Vars
-    if (req.method === 'GET') {
-        return res.status(200).json({
-            status: 'online',
-            env_check: {
-                VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL ? 'OK' : 'MISSING',
-                SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY ? 'OK' : 'MISSING'
-            }
-        })
-    }
-
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' })
-    }
+    if (req.method === 'GET') return res.status(200).json({ status: 'online' })
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
     try {
-        const supabaseUrl = process.env.VITE_SUPABASE_URL
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-        if (!supabaseUrl || !supabaseServiceKey) {
-            console.error('SERVER ERROR: Missing Env Vars')
-            return res.status(500).json({ error: 'Server Config Error: Missing Service Key' })
-        }
-
-        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+        const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
         const paymentData = req.body
 
-        // PushinPay sends 'id' as the Transaction ID
+        // Transaction ID (PushinPay)
         const txId = paymentData.id || paymentData.data?.id
-
-        // 3. LOG RAW REQUEST (Crucial for debugging)
-        try {
-            await supabase.from('webhook_logs').insert({
-                method: 'POST',
-                payload: paymentData,
-                status: 'received_v3_final'
-            })
-        } catch (e) { }
-
         const isPaid = paymentData.status === 'paid' || paymentData.status === 'approved'
 
         if (isPaid && txId) {
-            let userEmail = null
-            let planSlug = 'monthly'
-
-            // 4. LOOKUP INTENT
-            // Force Lowercase comparison because PushinPay sends Upper and DB has Lower
+            // 1. LOOKUP INTENT + UTMs
             const { data: intent, error: intentError } = await supabase
                 .from('payment_intents')
                 .select('*')
                 .eq('transaction_id', txId.toLowerCase())
                 .single()
 
-            if (intent) {
-                userEmail = intent.email
-                planSlug = intent.plan_slug
-
-                // Log Success Finding User
-                await supabase.from('webhook_logs').insert({
-                    status: 'intent_found',
-                    payload: { txId, email: userEmail, plan: planSlug }
-                })
-
-            } else {
-                // Log Failure Finding User
-                await supabase.from('webhook_logs').insert({
-                    status: 'intent_missing',
-                    payload: { txId, error: intentError?.message }
-                })
-
-                // Fallback: Try to find email in metadata (usually stripped by Gateway, but worth a try)
-                userEmail = paymentData.metadata?.email || paymentData.payer_email
+            if (!intent) {
+                console.error('[WebHook] Intent not found for:', txId)
+                // Fallback or Error? User script implies RE-SENDING same order. 
+                // If we don't have intent, we might lack UTMs. But user demands "Strict Payload".
+                // We will try to proceed with metadata if available or defaults.
             }
 
-            if (!userEmail) {
-                throw new Error(`CRITICAL: Could not identify user for Payment ID ${txId}. Intent missing and no email in payload.`)
-            }
+            const userEmail = intent?.email || paymentData.metadata?.email
+            const planSlug = intent?.plan_slug || 'monthly'
 
-            // 5. APPROVE ACCESS
-            const { error } = await supabase.rpc('handle_payment_webhook', {
+            if (!userEmail) throw new Error("CRITICAL: User unidentified in Webhook")
+
+            // 2. APPROVE ACCESS
+            await supabase.rpc('handle_payment_webhook', {
                 p_email: userEmail,
                 p_plan_slug: planSlug,
                 p_transaction_id: txId
             })
 
-            if (error) throw error
+            // 3. PROCESS INTEGRATIONS (UTMify)
+            if (process.env.UTMIFY_API_KEY) {
+                // Determine Creation Date
+                // CRITICAL: Must match the original PIX generation date if possible.
+                // If intent exists, use intent.created_at. Else use current timestamp (fallback).
+                const createdDateObj = intent?.created_at ? new Date(intent.created_at) : new Date()
+                const createdAt = formatStatsDate(createdDateObj)
 
-            // Log Final Success
-            await supabase.from('webhook_logs').insert({
-                status: 'success_approved_final',
-                payload: { email: userEmail, txId }
-            })
+                // Approval Date is Now
+                const now = new Date()
+                const approvedDate = formatStatsDate(now)
 
+                const valueInCents = Math.round((paymentData.amount || (intent?.amount || 0) * 100))
 
-            // =================================================================================
-            // 6. PROCESS INTEGRATIONS (UTMify, etc.)
-            // Logic: Backend only execution, Idempotency check, Error isolation
-            // =================================================================================
-            try {
-                // A. UTMify ENV-ONLY MODE (Official Doc Compliance)
-                if (process.env.UTMIFY_API_KEY) {
-                    const endpoint = process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api-credentials/orders'
-                    const eventsToSend = ['purchase', 'subscription_active'] // Webhook is always considered a purchase/conversion
-
-                    for (const eventName of eventsToSend) {
-                        try {
-                            // IDEMPOTENCY CHECK (Env Mode)
-                            const { data: existingLog } = await supabase
-                                .from('integration_logs')
-                                .select('id')
-                                .eq('transaction_id', txId)
-                                .eq('integration_name', 'utmify_env')
-                                .eq('event_name', eventName)
-                                .eq('status', 'success')
-                                .single()
-
-                            if (existingLog) {
-                                console.log(`Skipping UTMify(Env):${eventName} for ${txId} - Already Sent`)
-                                continue
-                            }
-
-                            const valueInCents = Math.round((paymentData.amount || 0)) // PushinPay sends amounts in cents usually, but verify if `value` or `amount`
-
-                            // We need to fetch intent data again to be sure about UTMs as they might not be passed in webhook
-                            const conversionData = intent || {
-                                transaction_id: txId,
-                                email: userEmail,
-                                value: paymentData.amount ? paymentData.amount / 100 : 0
-                            }
-
-                            // 🕒 DATE FORMATTING (YYYY-MM-DD HH:MM:SS) - UTC
-                            const now = new Date()
-                            const formatDate = (date) => date.toISOString().replace('T', ' ').split('.')[0]
-                            const approvedDate = formatDate(now)
-
-                            // 📦 STRICT OFFICIAL DOC PAYLOAD
-                            // Webhook always means "Paid"
-                            const payload = {
-                                orderId: conversionData.transaction_id,
-                                platform: 'Custom',
-                                paymentMethod: 'pix',
-                                status: 'paid',
-                                createdAt: approvedDate, // Assuming immediate payment or close enough
-                                approvedDate: approvedDate,
-                                refundedAt: null,
-                                customer: {
-                                    name: 'Cliente', // Webhook often lacks name unless queried, default safe
-                                    email: conversionData.email,
-                                    phone: conversionData.phone || null,
-                                    document: null,
-                                    country: 'BR',
-                                    ip: conversionData.client_ip || null
-                                },
-                                products: [
-                                    {
-                                        id: 'default-product',
-                                        name: 'Produto Digital',
-                                        planId: null,
-                                        planName: null,
-                                        quantity: 1,
-                                        priceInCents: valueInCents
-                                    }
-                                ],
-                                trackingParameters: {
-                                    src: null, sck: null,
-                                    utm_source: conversionData.utm_source || null,
-                                    utm_campaign: conversionData.utm_campaign || null,
-                                    utm_medium: conversionData.utm_medium || null,
-                                    utm_content: conversionData.utm_content || null,
-                                    utm_term: conversionData.utm_term || null
-                                },
-                                commission: {
-                                    totalPriceInCents: valueInCents,
-                                    gatewayFeeInCents: 0,
-                                    userCommissionInCents: valueInCents
-                                },
-                                isTest: false
-                            }
-
-                            // 🚀 SEND REQUEST
-                            const response = await fetch(endpoint, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'x-api-token': process.env.UTMIFY_API_KEY // ⚠️ OFFICIAL HEADER
-                                },
-                                body: JSON.stringify(payload)
-                            })
-
-                            const respJson = await response.json().catch(() => ({}))
-                            const success = response.ok
-
-                            // LOG RESULT
-                            await supabase.from('integration_logs').insert({
-                                transaction_id: txId,
-                                integration_name: 'utmify_env',
-                                event_name: eventName,
-                                status: success ? 'success' : 'failed',
-                                payload: payload,
-                                response: respJson
-                            })
-
-                        } catch (err) {
-                            console.error('UTMify Env Logic Error:', err)
-                        }
-                    }
+                // Prepare Customer
+                const customer = {
+                    name: 'Cliente', // Webhook usually lacks name
+                    email: userEmail,
+                    phone: intent?.phone || null,
+                    document: null,
+                    ip: intent?.ip_address || null
                 }
 
-                // B. OTHER DB INTEGRATIONS
-                const { data: activeIntegrations } = await supabase
-                    .from('integrations')
-                    .select('*')
-                    .eq('enabled', true)
-
-                if (activeIntegrations && activeIntegrations.length > 0) {
-                    // ... (Logic for other integrations)
-                    for (const integration of activeIntegrations) {
-                        if (process.env.UTMIFY_API_KEY && integration.name === 'utmify') continue // Skip if handled by ENV
-                        // ... Implementation for others if needed ...
-                    }
+                // Prepare UTMs (From Intent)
+                const utm = {
+                    utm_source: intent?.utm_source,
+                    utm_campaign: intent?.utm_campaign,
+                    utm_medium: intent?.utm_medium,
+                    utm_content: intent?.utm_content,
+                    utm_term: intent?.utm_term
                 }
-            } catch (integrationError) {
-                // Never block the payment success response because of integration failure
-                console.error('Integration Error:', integrationError)
-                await supabase.from('webhook_logs').insert({
-                    status: 'integration_error',
-                    payload: { error: integrationError.message, txId }
+
+                // Call Service
+                const result = await sendUtmifyOrder({
+                    orderId: txId, // MUST match original
+                    status: 'paid',
+                    valueInCents: valueInCents,
+                    createdAt: createdAt, // Consistency Check
+                    approvedDate: approvedDate,
+                    customer,
+                    utm,
+                    eventName: 'webhook_paid'
+                })
+
+                // Log Result
+                await supabase.from('integration_logs').insert({
+                    transaction_id: txId,
+                    integration_name: 'utmify_env',
+                    event_name: 'purchase', // Standardize event name for dashboard? 'paid' is status.
+                    status: result.success ? 'success' : 'failed',
+                    payload: result.payload,
+                    response: result.response || { error: result.error }
                 })
             }
-
         }
 
         return res.status(200).json({ success: true })
 
     } catch (err) {
         console.error('Webhook Error:', err)
-        // Log Crash
-        try {
-            const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
-            await supabase.from('webhook_logs').insert({
-                status: 'function_crash',
-                error_message: err.message
-            })
-        } catch (e) { }
         return res.status(500).json({ error: err.message })
     }
 }

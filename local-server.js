@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { sendUtmifyOrder, formatStatsDate } from './api/services/utmify.js'
 
 // --- ENV LOADER ---
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -32,7 +33,6 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseServiceKey) {
     console.error("⚠️  WARNING: SUPABASE_SERVICE_ROLE_KEY is missing in .env.local!")
-    console.error("   Server-side tracking will fail without it.")
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey || 'placeholder')
@@ -60,98 +60,67 @@ async function handleTrackEvent(req, res) {
             // 1. PROCESS INTEGRATIONS (UTMify w/ ENV Priority)
             // =================================================================================
 
-            // A. UTMify ENV-ONLY MODE (Official Doc Compliance)
+            // A. UTMify ENV-ONLY MODE (Service)
             if (process.env.UTMIFY_API_KEY) {
                 try {
                     console.log('[Local API] ⚡ UTMify Env Mode Active')
-                    // ⚙️ SPECS: Official Doc Endpoint
-                    const endpoint = process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api-credentials/orders'
 
-                    const valueInCents = Math.round((payload?.value || 0) * 100)
+                    const now = new Date()
+                    const createdAt = formatStatsDate(now)
 
                     let utmifyStatus = 'waiting_payment'
                     if (event === 'purchase' || event === 'subscription_active') utmifyStatus = 'paid'
 
-                    // 🕒 DATE FORMATTING (YYYY-MM-DD HH:MM:SS) - UTC
-                    const now = new Date()
-                    const formatDate = (date) => date.toISOString().replace('T', ' ').split('.')[0]
-                    const createdAt = formatDate(now)
-                    const approvedDate = utmifyStatus === 'paid' ? createdAt : null
-
-                    // 📦 STRICT OFFICIAL DOC PAYLOAD
-                    const trackPayload = {
-                        orderId: transactionId,
-                        platform: 'Custom',
-                        paymentMethod: 'pix',
-                        status: utmifyStatus,
-                        createdAt: createdAt,
-                        approvedDate: approvedDate,
-                        refundedAt: null,
-                        customer: {
-                            name: payload?.name || 'Cliente',
-                            email: payload?.email || 'email@naoinformado.com',
-                            phone: payload?.phone || null,
-                            document: payload?.document || null,
-                            country: 'BR',
-                            ip: payload?.client_ip || null
-                        },
-                        products: [{
-                            id: 'default-product',
-                            name: 'Produto Digital',
-                            planId: null,
-                            planName: null,
-                            quantity: 1,
-                            priceInCents: valueInCents
-                        }],
-                        trackingParameters: {
-                            src: null, sck: null,
-                            utm_source: payload?.utm_source || null,
-                            utm_campaign: payload?.utm_campaign || null,
-                            utm_medium: payload?.utm_medium || null,
-                            utm_content: payload?.utm_content || null,
-                            utm_term: payload?.utm_term || null
-                        },
-                        commission: {
-                            totalPriceInCents: valueInCents,
-                            gatewayFeeInCents: 0,
-                            userCommissionInCents: valueInCents
-                        },
-                        isTest: false
+                    const customer = {
+                        name: payload?.name || 'Cliente Local',
+                        email: payload?.email || 'localuser@test.com',
+                        phone: payload?.phone || null,
+                        document: payload?.document || null,
+                        ip: payload?.client_ip || null
                     }
 
-                    // Idempotency (Env Mode Specific)
+                    const utm = {
+                        utm_source: payload?.utm_source,
+                        utm_campaign: payload?.utm_campaign,
+                        utm_medium: payload?.utm_medium,
+                        utm_content: payload?.utm_content,
+                        utm_term: payload?.utm_term
+                    }
+
+                    const valueInCents = Math.round((payload?.value || 0) * 100)
+
+                    // SERVICE CALL
+                    const result = await sendUtmifyOrder({
+                        orderId: transactionId || `local_${userId}`,
+                        status: utmifyStatus,
+                        valueInCents: valueInCents,
+                        createdAt: createdAt,
+                        approvedDate: utmifyStatus === 'paid' ? createdAt : null,
+                        customer,
+                        utm,
+                        eventName: event
+                    })
+
+                    // Idempotency check handled inside strict backend logic usually, but here checking manually for logs
                     const { data: existing } = await supabase.from('integration_logs')
                         .select('id')
-                        .eq('transaction_id', transactionId || `lead_${userId}`)
+                        .eq('transaction_id', transactionId || `local_${userId}`)
                         .eq('integration_name', 'utmify_env')
                         .eq('event_name', event)
                         .eq('status', 'success')
                         .single()
 
                     if (!existing) {
-                        const response = await fetch(endpoint, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'x-api-token': process.env.UTMIFY_API_KEY // ⚠️ OFFICIAL HEADER
-                            },
-                            body: JSON.stringify(trackPayload)
-                        })
-
-                        const success = response.ok
-                        const respJson = await response.json().catch(() => ({}))
-
                         // Log Result
                         await supabase.from('integration_logs').insert({
-                            transaction_id: transactionId || `lead_${userId}`,
+                            transaction_id: transactionId || `local_${userId}`,
                             integration_name: 'utmify_env',
                             event_name: event,
-                            status: success ? 'success' : 'failed',
-                            payload: trackPayload,
-                            response: respJson
+                            status: result.success ? 'success' : 'failed',
+                            payload: result.payload,
+                            response: result.response || { error: result.error }
                         })
-
-                        results.push({ name: 'utmify', status: success ? 'sent' : 'failed' })
+                        results.push({ name: 'utmify', status: result.success ? 'sent' : 'failed' })
                     } else {
                         results.push({ name: 'utmify', status: 'idempotent_skip' })
                     }
@@ -159,38 +128,6 @@ async function handleTrackEvent(req, res) {
                     console.error('[Local API] UTMify Error:', err)
                     results.push({ name: 'utmify', status: 'error', error: err.message })
                 }
-            }
-
-            // =================================================================================
-            // 2. DB INTEGRATIONS
-            // =================================================================================
-            const { data: activeIntegrations } = await supabase
-                .from('integrations')
-                .select('*')
-                .eq('enabled', true)
-
-            for (const integration of activeIntegrations || []) {
-                if (process.env.UTMIFY_API_KEY && integration.name === 'utmify') continue // Skip if handled by Env
-
-                let enabledEvents = integration.enabled_events
-                if (!enabledEvents) enabledEvents = ['purchase', 'pix_created', 'lead_created', 'pix_pending', 'subscription_active']
-
-                if (!enabledEvents.includes(event)) {
-                    results.push({ name: integration.name, status: 'skipped (disabled)' })
-                    continue
-                }
-
-                const uniqueKey = transactionId || `lead_${userId}`
-
-                const { data: existing } = await supabase.from('integration_logs')
-                    .select('id').eq('transaction_id', uniqueKey).eq('integration_name', integration.name).eq('event_name', event).eq('status', 'success').single()
-
-                if (existing) {
-                    results.push({ name: integration.name, status: 'skipped (idempotent)' })
-                    continue
-                }
-
-                // Logic for OTHER integrations would go here (or UTMify if ENV var missing)
             }
 
             res.writeHead(200, { 'Content-Type': 'application/json' })
@@ -223,5 +160,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
     console.log(`[Local API] Server running at http://localhost:${PORT}`)
-    console.log(`[Local API] Ready to handle /api/track-event requests via Vite Proxy`)
+    console.log(`[Local API] Ready to handle /api/track-event requests`)
 })
