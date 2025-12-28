@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import DataTable from '@/components/admin/DataTable'
-import { User, Mail, Calendar, CreditCard, Shield, MoreVertical, CheckCircle, XCircle, Search } from 'lucide-react'
+import { User, Mail, Calendar, CreditCard, Shield, MoreVertical, CheckCircle, XCircle, Search, RefreshCw, Loader2, PlayCircle, AlertCircle, X } from 'lucide-react'
 
 export default function UserManagement() {
     const [selectedUser, setSelectedUser] = useState(null)
@@ -12,6 +12,38 @@ export default function UserManagement() {
     const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(true)
     const [stats, setStats] = useState({ total: 0, active: 0, newToday: 0 })
+
+    // Reprocess State
+    const [showReprocessModal, setShowReprocessModal] = useState(false)
+    const [reprocessId, setReprocessId] = useState('')
+    const [reprocessing, setReprocessing] = useState(false)
+
+    const handleReprocess = async () => {
+        if (!reprocessId.trim()) return alert('Digite o ID da transação')
+
+        setReprocessing(true)
+        try {
+            const { data, error } = await supabase.rpc('reprocess_payment_intent', {
+                p_transaction_id: reprocessId.trim()
+            })
+
+            if (error) throw error
+
+            if (data.success) {
+                alert('✅ Sucesso: ' + data.message)
+                setShowReprocessModal(false)
+                setReprocessId('')
+                fetchUsers() // Refresh users list
+            } else {
+                alert('❌ Erro: ' + (data.error || 'Erro desconhecido ao reprocessar'))
+            }
+        } catch (error) {
+            console.error('Error reprocessing:', error)
+            alert('Erro ao chamar o sistema: ' + error.message)
+        } finally {
+            setReprocessing(false)
+        }
+    }
 
     useEffect(() => {
         fetchUsers()
@@ -255,7 +287,15 @@ export default function UserManagement() {
                     <h1 className="text-3xl font-black text-white mb-2">Usuários</h1>
                     <p className="text-gray-400">Gerencie todos os usuários e suas assinaturas.</p>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-center">
+                    <button
+                        onClick={() => setShowReprocessModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold transition-all h-fit"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        Reprocessar
+                    </button>
+
                     <div className="px-4 py-2 bg-white/5 rounded-lg border border-white/10 text-center">
                         <span className="block text-2xl font-bold text-white">{stats.total}</span>
                         <span className="text-xs text-gray-500">Total</span>
@@ -376,6 +416,66 @@ export default function UserManagement() {
                             >
                                 {updating ? 'Salvando...' : 'Salvar Alterações'}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reprocess Modal */}
+            {showReprocessModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-card border border-white/10 rounded-xl max-w-md w-full">
+                        <div className="border-b border-white/10 p-6 flex items-center justify-between">
+                            <h2 className="text-2xl font-bold text-white">Reprocessar Pagamento</h2>
+                            <button
+                                onClick={() => setShowReprocessModal(false)}
+                                className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-all"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                                <p className="text-sm text-yellow-200 flex gap-2">
+                                    <AlertCircle className="w-4 h-4 mt-0.5" />
+                                    Use isso caso um pagamento tenha sido confirmado no banco (PushinPay) mas não liberou o acesso aqui.
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-300 mb-2">Transaction ID (do Gateway)</label>
+                                <input
+                                    type="text"
+                                    placeholder="Ex: a0b25fa3..."
+                                    value={reprocessId}
+                                    onChange={(e) => setReprocessId(e.target.value)}
+                                    className="w-full bg-background border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary font-mono text-sm"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-4 pt-4">
+                                <button
+                                    onClick={() => setShowReprocessModal(false)}
+                                    className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-bold transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleReprocess}
+                                    disabled={reprocessing}
+                                    className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold transition-all flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {reprocessing ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Processando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <PlayCircle className="w-5 h-5" />
+                                            Processar
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
