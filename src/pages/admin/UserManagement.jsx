@@ -316,6 +316,16 @@ export default function UserManagement() {
             render: (value) => getPlanBadge(value)
         },
         {
+            header: 'Cadastrado em',
+            accessor: 'created_at',
+            render: (value) => (
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Calendar className="w-4 h-4" />
+                    {value ? formatDate(value) : '--/--/----'}
+                </div>
+            )
+        },
+        {
             header: 'Expira ern',
             accessor: 'plan_expira_em',
             render: (value) => (
