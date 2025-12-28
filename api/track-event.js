@@ -82,22 +82,42 @@ export default async function handler(req, res) {
             // SEND TO UTMIFY
             if (integration.name === 'utmify') {
                 const config = integration.config
+                const valueInCents = Math.round((payload?.value || 0) * 100)
+                const nowIso = new Date().toISOString()
+
+                // Determine Status based on event
+                let orderStatus = 'waiting_payment'
+                if (event === 'purchase' || event === 'subscription_active') orderStatus = 'paid'
+
                 const trackPayload = {
-                    token: config.api_key,
-                    platform: 'PushinPay', // REQUIRED by orders endpoint
+                    platform: 'PushinPay',
                     orderId: transactionId,
                     paymentMethod: 'pix',
+                    status: orderStatus,
+                    approvedDate: nowIso,
+                    createdAt: nowIso,
+                    token: config.api_key, // Keep in body just in case
                     customer: {
+                        name: payload?.name || 'Cliente', // Front should send name, or default
                         email: payload?.email,
                         phone: payload?.phone,
-                        ip: payload?.client_ip || '127.0.0.1' // fallback
+                        document: payload?.document || null,
+                        ip: payload?.client_ip || '127.0.0.1'
                     },
                     products: [{
+                        planId: 'plan_1',
                         id: 'plan_1',
+                        planName: 'Assinatura',
                         name: 'Assinatura',
-                        price: payload?.value || 0,
+                        priceInCents: valueInCents,
                         quantity: 1
                     }],
+                    commission: {
+                        userCommissionInCents: 0,
+                        platformCommissionInCents: 0,
+                        gatewayFeeInCents: 0,
+                        totalPriceInCents: valueInCents
+                    },
                     trackingParameters: {
                         utm_source: payload?.utm_source,
                         utm_campaign: payload?.utm_campaign,
@@ -112,7 +132,7 @@ export default async function handler(req, res) {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-api-token': config.api_key // ⚡ CONFIRMED HEADER
+                        'x-api-token': config.api_key
                     },
                     body: JSON.stringify(trackPayload)
                 })

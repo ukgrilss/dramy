@@ -170,22 +170,42 @@ export default async function handler(req, res) {
                             // C. SEND TO UTMIFY
                             if (integration.name === 'utmify') {
                                 const config = integration.config
+                                const valueInCents = Math.round((conversionData.value || 0) * 100)
+                                const nowIso = new Date().toISOString()
+
+                                let orderStatus = 'paid' // Webhooks are usually for paid/approved
+                                if (eventName === 'pix_created') orderStatus = 'waiting_payment'
+
                                 // Construct Payload
                                 const payload = {
-                                    orderId: conversionData.transaction_id,
                                     platform: 'PushinPay',
+                                    orderId: conversionData.transaction_id,
                                     paymentMethod: 'pix',
+                                    status: orderStatus,
+                                    approvedDate: nowIso,
+                                    createdAt: nowIso,
+                                    token: config.api_key,
                                     customer: {
+                                        name: conversionData.name || 'Cliente', // Webhook usually has name
                                         email: conversionData.email,
                                         phone: conversionData.phone,
+                                        document: conversionData.document || null,
                                         ip: conversionData.client_ip || '127.0.0.1'
                                     },
                                     products: [{
+                                        planId: 'plan_1',
                                         id: 'plan_1',
+                                        planName: 'Assinatura',
                                         name: 'Assinatura',
-                                        price: conversionData.value,
+                                        priceInCents: valueInCents,
                                         quantity: 1
                                     }],
+                                    commission: {
+                                        userCommissionInCents: 0,
+                                        platformCommissionInCents: 0,
+                                        gatewayFeeInCents: 0,
+                                        totalPriceInCents: valueInCents
+                                    },
                                     trackingParameters: {
                                         utm_source: conversionData.utm_source,
                                         utm_campaign: conversionData.utm_campaign,
@@ -200,7 +220,7 @@ export default async function handler(req, res) {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
-                                        'x-api-token': config.api_key // ⚡ CONFIRMED HEADER
+                                        'x-api-token': config.api_key
                                     },
                                     body: JSON.stringify(payload)
                                 })

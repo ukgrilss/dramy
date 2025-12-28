@@ -101,4 +101,64 @@ async function run() {
     } catch (e) { console.log("Error:", e.message) }
 }
 
-run()
+// run()
+
+async function runGolden() {
+    // 10. GOLDEN TEST: Correct Endpoint + Header + Body
+    const GOLDEN_URL = 'https://api.utmify.com.br/api-credentials/orders'
+    console.log(`\n--- Testing: GOLDEN TEST (Full Payload) ---`)
+
+    // Payload matching api/track-event.js
+    const goldenPayload = {
+        platform: 'PushinPay',
+        orderId: 'test_tx_' + Date.now(),
+        paymentMethod: 'pix',
+        status: 'waiting_payment', // Guessing status
+        approvedDate: new Date().toISOString(), // Required field
+        createdAt: new Date().toISOString(), // Required field
+        customer: {
+            name: 'Test Client', // Required
+            email: 'test_golden@example.com',
+            phone: '5511999999999',
+            document: '12345678909', // CPF/CNPJ
+            ip: '127.0.0.1'
+        },
+        products: [{
+            planId: 'plan_1', // Changed from id to planId
+            id: 'plan_1', // Required as well
+            planName: 'Assinatura', // Changed from name to planName
+            name: 'Assinatura', // Required as well
+            priceInCents: 100,
+            quantity: 1
+        }],
+        commission: {
+            userCommissionInCents: 0,
+            platformCommissionInCents: 0,
+            gatewayFeeInCents: 0,
+            totalPriceInCents: 100 // Test value
+        },
+        trackingParameters: {
+            utm_source: 'src_test',
+            utm_campaign: 'cmp_test',
+            utm_medium: 'med_test',
+            utm_content: 'cont_test',
+            utm_term: 'term_test'
+        }
+    }
+
+    try {
+        const res = await fetch(GOLDEN_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-token': API_KEY
+            },
+            body: JSON.stringify(goldenPayload)
+        })
+        const text = await res.text()
+        console.log(`Status: ${res.status}`)
+        console.log(`Response:`, text)
+    } catch (e) { console.log("Error:", e.message) }
+}
+
+runGolden()
