@@ -140,7 +140,12 @@ export default async function handler(req, res) {
                     const eventsToSend = ['purchase', 'subscription_active']
 
                     for (const integration of activeIntegrations) {
-                        const enabledEvents = integration.enabled_events || []
+                        let enabledEvents = integration.enabled_events
+
+                        // 🛡️ FALLBACK: If column is missing, enable ALL
+                        if (!enabledEvents) {
+                            enabledEvents = ['purchase', 'subscription_active']
+                        }
 
                         for (const eventName of eventsToSend) {
 

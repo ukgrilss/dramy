@@ -37,11 +37,15 @@ export default async function handler(req, res) {
 
         for (const integration of activeIntegrations) {
             // Check if this specific event is enabled for this integration
-            const enabledEvents = integration.enabled_events || []
-            // Legacy support: if enabled_events is null, assume 'purchase' only or migrate logic. 
-            // Here we skip if event is not in list.
+            let enabledEvents = integration.enabled_events
+
+            // 🛡️ FALLBACK: If column is missing (migration not run), default to ALL enabled
+            if (!enabledEvents) {
+                enabledEvents = ['purchase', 'pix_created', 'lead_created', 'pix_pending', 'subscription_active']
+            }
+
             if (!enabledEvents.includes(event)) {
-                results.push({ name: integration.name, status: 'skipped_disabled_event' })
+                results.push({ name: integration.name, status: `skipped_disabled_event_${event}` })
                 continue
             }
 
