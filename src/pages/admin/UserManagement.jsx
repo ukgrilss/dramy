@@ -20,14 +20,12 @@ export default function UserManagement() {
     const [reprocessing, setReprocessing] = useState(false)
 
     const handleAutoReprocess = async (email, e) => {
-        // 1. Force Stop Propagation directly
-        if (e) {
-            e.preventDefault()
+        // Simple stop propagation is enough
+        if (e && e.stopPropagation) {
             e.stopPropagation()
         }
 
         // 2. Immediate Visual Feedback (Native Alert)
-        // This PROVES the button was clicked.
         if (!confirm(`Deseja verificar e reprocessar o pagamento de ${email}?`)) {
             return
         }
