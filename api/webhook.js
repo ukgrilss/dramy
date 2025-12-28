@@ -172,27 +172,35 @@ export default async function handler(req, res) {
                                 const config = integration.config
                                 // Construct Payload
                                 const payload = {
-                                    token: config.api_key, // ⚡ ADD TOKEN TO BODY
-                                    event: eventName,
-                                    transaction_id: conversionData.transaction_id,
-                                    value: conversionData.value,
-                                    currency: conversionData.currency,
-                                    email: conversionData.email,
-                                    phone: conversionData.phone,
-                                    utm_source: conversionData.utm_source,
-                                    utm_campaign: conversionData.utm_campaign,
-                                    utm_medium: conversionData.utm_medium,
-                                    utm_content: conversionData.utm_content,
-                                    utm_term: conversionData.utm_term
+                                    orderId: conversionData.transaction_id,
+                                    platform: 'PushinPay',
+                                    paymentMethod: 'pix',
+                                    customer: {
+                                        email: conversionData.email,
+                                        phone: conversionData.phone,
+                                        ip: conversionData.client_ip || '127.0.0.1'
+                                    },
+                                    products: [{
+                                        id: 'plan_1',
+                                        name: 'Assinatura',
+                                        price: conversionData.value,
+                                        quantity: 1
+                                    }],
+                                    trackingParameters: {
+                                        utm_source: conversionData.utm_source,
+                                        utm_campaign: conversionData.utm_campaign,
+                                        utm_medium: conversionData.utm_medium,
+                                        utm_content: conversionData.utm_content,
+                                        utm_term: conversionData.utm_term
+                                    }
                                 }
 
                                 // Send Request
-                                const response = await fetch('https://api.utmify.com.br/v1/conversions', {
+                                const response = await fetch('https://api.utmify.com.br/api-credentials/orders', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
-                                        'token': config.api_key, // ⚡ TRY HEADER 'token'
-                                        'x-api-key': config.api_key
+                                        'x-api-token': config.api_key // ⚡ CONFIRMED HEADER
                                     },
                                     body: JSON.stringify(payload)
                                 })

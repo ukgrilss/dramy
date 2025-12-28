@@ -81,60 +81,68 @@ export default async function handler(req, res) {
 
             // SEND TO UTMIFY
             if (integration.name === 'utmify') {
-                try {
-                    const config = integration.config
-                    const trackPayload = {
-                        token: config.api_key, // ⚡ ADD TOKEN TO BODY
-                        event: event,
-                        transaction_id: transactionId,
-                        user_id: userId,
-                        value: payload?.value || 0,
-                        currency: 'BRL',
+                const config = integration.config
+                const trackPayload = {
+                    token: config.api_key,
+                    platform: 'PushinPay', // REQUIRED by orders endpoint
+                    orderId: transactionId,
+                    paymentMethod: 'pix',
+                    customer: {
                         email: payload?.email,
                         phone: payload?.phone,
+                        ip: payload?.client_ip || '127.0.0.1' // fallback
+                    },
+                    products: [{
+                        id: 'plan_1',
+                        name: 'Assinatura',
+                        price: payload?.value || 0,
+                        quantity: 1
+                    }],
+                    trackingParameters: {
                         utm_source: payload?.utm_source,
                         utm_campaign: payload?.utm_campaign,
                         utm_medium: payload?.utm_medium,
                         utm_content: payload?.utm_content,
                         utm_term: payload?.utm_term
                     }
-
-                    const response = await fetch('https://api.utmify.com.br/v1/conversions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'token': config.api_key, // ⚡ TRY HEADER 'token'
-                            'x-api-key': config.api_key
-                        },
-                        body: JSON.stringify(trackPayload)
-                    })
-
-                    const respJson = await response.json().catch(() => ({}))
-                    const success = response.ok
-
-                    // Log Result
-                    await supabase.from('integration_logs').insert({
-                        transaction_id: uniqueKey,
-                        integration_name: integration.name,
-                        event_name: event,
-                        status: success ? 'success' : 'failed',
-                        payload: trackPayload,
-                        response: respJson
-                    })
-
-                    results.push({ name: integration.name, status: success ? 'sent' : 'failed' })
-
-                } catch (err) {
-                    console.error('Integration Error:', err)
-                    results.push({ name: integration.name, status: 'error', error: err.message })
                 }
+
+                // 9. CORRECT ENDPOINT
+                const response = await fetch('https://api.utmify.com.br/api-credentials/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-token': config.api_key // ⚡ CONFIRMED HEADER
+                    },
+                    body: JSON.stringify(trackPayload)
+                })
+
+                const respJson = await response.json().catch(() => ({}))
+                const success = response.ok
+
+                // Log Result
+                await supabase.from('integration_logs').insert({
+                    transaction_id: uniqueKey,
+                    integration_name: integration.name,
+                    event_name: event,
+                    status: success ? 'success' : 'failed',
+                    payload: trackPayload,
+                    response: respJson
+                })
+
+                results.push({ name: integration.name, status: success ? 'sent' : 'failed' })
+
+            } catch (err) {
+                console.error('Integration Error:', err)
+                results.push({ name: integration.name, status: 'error', error: err.message })
             }
         }
+    }
 
         return res.status(200).json({ success: true, results })
 
-    } catch (err) {
-        console.error('Track API Error:', err)
-        return res.status(500).json({ error: err.message })
-    }
+} catch (err) {
+    console.error('Track API Error:', err)
+    return res.status(500).json({ error: err.message })
+}
 }
