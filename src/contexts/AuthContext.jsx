@@ -174,7 +174,6 @@ export const AuthProvider = ({ children }) => {
         userRole,
         profile, // Export profile
         loading,
-        loading,
         signUp,
         signIn,
         signOut,

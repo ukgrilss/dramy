@@ -1,4 +1,3 @@
-```javascript
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import DataTable from '@/components/admin/DataTable'
@@ -15,13 +14,10 @@ export default function SubscriptionManagement() {
     const [showReprocessModal, setShowReprocessModal] = useState(false)
     const [reprocessId, setReprocessId] = useState('')
     const [reprocessing, setReprocessing] = useState(false)
-    
 
 
-    // Reprocess State
-    const [showReprocessModal, setShowReprocessModal] = useState(false)
-    const [reprocessId, setReprocessId] = useState('')
-    const [reprocessing, setReprocessing] = useState(false)
+
+
 
     useEffect(() => {
         fetchSubscriptions()
@@ -78,20 +74,7 @@ export default function SubscriptionManagement() {
         }
     }
 
-    // ... (keep handleEdit, validateSubscription, etc. - verifying lines 41-304 match original context, I will skip replacing them and only replace the top and render)
-    // Wait, replace_file_content replaces a block. I need to be careful not to delete methods.
-    // I should probably split this into two edits or use multi_eplace.
-    // However, I can just insert the new methods via a carefully targeted replace.
-    // But inserting large chunks is safer if I replace the top part (Imports + Component Start) and then the render part.
 
-    // Method 2: Use multi_replace
-    // Chunk 1: Imports
-    // Chunk 2: State definition
-    // Chunk 3: handleReprocess function (before existing methods)
-    // Chunk 4: Button in Header
-    // Chunk 5: Modal at bottom
-
-    // I will use multi_replace for safety.
 
 
     const handleEdit = (subscription) => {
@@ -259,7 +242,7 @@ export default function SubscriptionManagement() {
         const Icon = badge.icon
 
         return (
-            <span className={`inline - flex items - center gap - 1 px - 2 py - 1 rounded text - xs font - bold ${ badge.bg } ${ badge.text } `}>
+            <span className={`inline - flex items - center gap - 1 px - 2 py - 1 rounded text - xs font - bold ${badge.bg} ${badge.text} `}>
                 <Icon className="w-3 h-3" />
                 {badge.label}
             </span>
@@ -366,7 +349,7 @@ export default function SubscriptionManagement() {
                     <h1 className="text-3xl font-black text-white mb-2">Gerenciamento de Assinaturas</h1>
                     <p className="text-gray-400">{subscriptions.length} assinaturas cadastradas</p>
                 </div>
-                <button 
+                <button
                     onClick={() => setShowReprocessModal(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold transition-all"
                 >
