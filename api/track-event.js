@@ -44,6 +44,17 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true, message: 'No active integrations' })
         }
 
+        // 2a. Fetch User Profile if userId is present (to get phone, name, document)
+        let userProfile = {}
+        if (userId) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('name, phone, cpf, email') // fetching email just to be safe
+                .eq('id', userId)
+                .single()
+            if (profile) userProfile = profile
+        }
+
         // 3. Process Each Integration
         const results = []
 
@@ -90,6 +101,12 @@ export default async function handler(req, res) {
                     let orderStatus = 'waiting_payment'
                     if (event === 'purchase' || event === 'subscription_active') orderStatus = 'paid'
 
+                    // 🛡️ Robust Customer Data Construction
+                    const customerName = payload?.name || userProfile.name || 'Cliente'
+                    const customerEmail = payload?.email || userProfile.email || 'email@naoinformado.com'
+                    const customerPhone = payload?.phone || userProfile.phone || '5511999999999' // Fallback required by UTMify
+                    const customerDoc = payload?.document || userProfile.cpf || null
+
                     const trackPayload = {
                         platform: 'PushinPay',
                         orderId: transactionId,
@@ -99,10 +116,10 @@ export default async function handler(req, res) {
                         createdAt: nowIso,
                         token: config.api_key, // Keep in body just in case
                         customer: {
-                            name: payload?.name || 'Cliente', // Front should send name, or default
-                            email: payload?.email,
-                            phone: payload?.phone,
-                            document: payload?.document || null,
+                            name: customerName,
+                            email: customerEmail,
+                            phone: customerPhone,
+                            document: customerDoc,
                             ip: payload?.client_ip || '127.0.0.1'
                         },
                         products: [{
