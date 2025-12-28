@@ -47,7 +47,6 @@ export async function sendUtmifyOrder({
     customer,
     utm,
     eventName,
-    eventName,
     // Strict Replay Mode
     rawPayload
 }) {
