@@ -293,7 +293,7 @@ export default function UserManagement() {
                     )
                 }
 
-                // Default / Inactive -> User requested "Nenhuma"
+                // Default / Inactive
                 return (
                     <div className="flex items-center gap-2 text-sm text-gray-400 bg-gray-500/10 px-2 py-1 rounded-md border border-gray-500/20">
                         <XCircle className="w-4 h-4" />
@@ -322,29 +322,39 @@ export default function UserManagement() {
             accessor: 'id',
             className: 'text-right',
             render: (value, row) => (
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
                     <button
-                        onClick={(e) => {
+                        type="button"
+                        onClickCapture={(e) => {
+                            // CAPTURE PHASE: Fires before bubbling to row
                             e.stopPropagation()
                             e.preventDefault()
                             handleAutoReprocess(row.email, e)
                         }}
                         disabled={reprocessing}
-                        className="p-1.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors disabled:opacity-50 relative z-50 pointer-events-auto"
+                        className="p-1.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors disabled:opacity-50 relative z-50 cursor-pointer"
                         title="Reprocessar Último Pagamento (Automático)"
                     >
                         <RefreshCw className={`w-4 h-4 ${reprocessing ? 'animate-spin' : ''}`} />
                     </button>
                     <button
-                        onClick={() => handleManage(row)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-lg transition-colors"
+                        type="button"
+                        onClickCapture={(e) => {
+                            e.stopPropagation()
+                            handleManage(row)
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-lg transition-colors cursor-pointer"
                     >
                         <User className="w-3 h-3" />
                         Gerenciar
                     </button>
                     <button
-                        onClick={() => handleDelete(row.id)}
-                        className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                        type="button"
+                        onClickCapture={(e) => {
+                            e.stopPropagation()
+                            handleDelete(row.id)
+                        }}
+                        className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
                         title="Apagar Usuário"
                     >
                         <Shield className="w-4 h-4" />
