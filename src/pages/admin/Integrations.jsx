@@ -193,13 +193,21 @@ export default function Integrations() {
                                     <Key className="w-4 h-4 text-primary" />
                                     API Key / Token
                                 </label>
-                                <input
-                                    type="password" // hide key
-                                    value={formData.api_key}
-                                    onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
-                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary font-mono text-sm"
-                                    placeholder="Digite sua chave de API aqui..."
-                                />
+
+                                {integrations.find(i => i.id === configuring)?.name === 'utmify' ? (
+                                    <div className="w-full bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3 text-green-400 font-mono text-sm flex items-center gap-2">
+                                        <Lock className="w-4 h-4" />
+                                        <span>Gerenciado via Variável de Ambiente (Seguro)</span>
+                                    </div>
+                                ) : (
+                                    <input
+                                        type="password" // hide key
+                                        value={formData.api_key}
+                                        onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
+                                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary font-mono text-sm"
+                                        placeholder="Digite sua chave de API aqui..."
+                                    />
+                                )}
                             </div>
 
                             {/* Event Name */}

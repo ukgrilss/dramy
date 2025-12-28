@@ -45,9 +45,33 @@ export default async function handler(req, res) {
             if (process.env.UTMIFY_API_KEY) {
                 // Determine Creation Date
                 // CRITICAL: Must match the original PIX generation date if possible.
-                // If intent exists, use intent.created_at. Else use current timestamp (fallback).
-                const createdDateObj = intent?.created_at ? new Date(intent.created_at) : new Date()
-                const createdAt = formatStatsDate(createdDateObj)
+                // STRATEGY: Lookup original 'waiting_payment' log in integration_logs (Strict Contract)
+                let createdAt = null
+
+                try {
+                    const { data: originalLog } = await supabase
+                        .from('integration_logs')
+                        .select('payload')
+                        .eq('transaction_id', txId)
+                        .eq('integration_name', 'utmify_env')
+                        .neq('event_name', 'purchase') // Avoid self-match if re-running
+                        .order('created_at', { ascending: true }) // Get the first one (creation)
+                        .limit(1)
+                        .single()
+
+                    if (originalLog && originalLog.payload && originalLog.payload.createdAt) {
+                        console.log('[Webhook] Found original createdAt:', originalLog.payload.createdAt)
+                        createdAt = originalLog.payload.createdAt
+                    }
+                } catch (lookupErr) {
+                    console.warn('[Webhook] Failed to lookup original log:', lookupErr.message)
+                }
+
+                // Fallback if not found (e.g. first event failed or direct payment)
+                if (!createdAt) {
+                    const createdDateObj = intent?.created_at ? new Date(intent.created_at) : new Date()
+                    createdAt = formatStatsDate(createdDateObj)
+                }
 
                 // Approval Date is Now
                 const now = new Date()
