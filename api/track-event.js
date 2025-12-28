@@ -98,7 +98,7 @@ export default async function handler(req, res) {
                     const nowIso = new Date().toISOString()
 
                     // Determine Status based on event
-                    let orderStatus = 'waiting_payment'
+                    let orderStatus = 'pending'
                     if (event === 'purchase' || event === 'subscription_active') orderStatus = 'paid'
 
                     // 🛡️ Robust Customer Data Construction

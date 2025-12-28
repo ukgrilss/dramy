@@ -174,7 +174,7 @@ export default async function handler(req, res) {
                                 const nowIso = new Date().toISOString()
 
                                 let orderStatus = 'paid' // Webhooks are usually for paid/approved
-                                if (eventName === 'pix_created') orderStatus = 'waiting_payment'
+                                if (eventName === 'pix_created') orderStatus = 'pending'
 
                                 // Construct Payload
                                 const payload = {

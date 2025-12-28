@@ -71,7 +71,7 @@ async function main() {
         .from('integration_logs')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(10)
+        .limit(3)
 
     if (logError) console.error("Error fetching logs:", logError)
 
@@ -79,10 +79,9 @@ async function main() {
     logs?.forEach(l => {
         console.log(`Time: ${l.created_at}`)
         console.log(`Event: ${l.event_name}`)
-        console.log(`Integration: ${l.integration_name}`)
         console.log(`Status: ${l.status}`)
-        console.log(`TxID: ${l.transaction_id}`)
-        console.log(`Resp:`, JSON.stringify(l.response || {}).substring(0, 50))
+        console.log(`Payload:`, JSON.stringify(l.payload, null, 2))
+        console.log(`Resp:`, JSON.stringify(l.response || {}).substring(0, 500))
         console.log("----------------")
     })
 }
