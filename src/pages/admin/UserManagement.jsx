@@ -125,6 +125,7 @@ export default function UserManagement() {
                 .from('profiles')
                 .select('*')
                 .order('created_at', { ascending: false })
+                .order('id', { ascending: false }) // Stabilize order
 
             if (error) throw error
 

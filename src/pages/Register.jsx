@@ -9,7 +9,11 @@ export default function Register() {
     const navigate = useNavigate()
     const { signUp } = useAuth()
     const [searchParams] = useSearchParams()
-    const isTrial = searchParams.get('trial') === 'true'
+    const isTrialParam = searchParams.get('trial') === 'true'
+
+    // Simple Client-Side Abuse Prevention
+    const hasUsedTrial = localStorage.getItem('dramy_trial_used') === 'true'
+    const isTrial = isTrialParam && !hasUsedTrial
 
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
@@ -63,9 +67,8 @@ export default function Register() {
             // If trial mode, activate trial
             if (isTrial && result?.user?.id) {
                 const trialResult = await activateFreeTrial(result.user.id)
-                if (!trialResult?.success) {
-                    // Show error to user, but continue registration
-                    // alert(`Não foi possível ativar o teste grátis: ${trialResult?.message || 'Erro desconhecido'}`)
+                if (trialResult?.success) {
+                    localStorage.setItem('dramy_trial_used', 'true') // ⚡ Mark device as used
                 }
             }
 
