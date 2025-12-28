@@ -305,9 +305,14 @@ export default function UserManagement() {
             render: (value, row) => (
                 <div className="flex items-center justify-end gap-2">
                     <button
-                        onClick={(e) => handleAutoReprocess(row.email, e)}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                            alert('CLICOU! Iniciando...') // VISUAL CONFIRMATION
+                            handleAutoReprocess(row.email, e)
+                        }}
                         disabled={reprocessing}
-                        className="p-1.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors disabled:opacity-50"
+                        className="p-1.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors disabled:opacity-50 relative z-50 pointer-events-auto"
                         title="Reprocessar Último Pagamento (Automático)"
                     >
                         <RefreshCw className={`w-4 h-4 ${reprocessing ? 'animate-spin' : ''}`} />
