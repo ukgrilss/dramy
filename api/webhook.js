@@ -79,13 +79,18 @@ export default async function handler(req, res) {
 
                 const valueInCents = Math.round((paymentData.amount || (intent?.amount || 0) * 100))
 
+                // IP Handling
+                // Webhook is server-to-server, so req.ip is the gateway's IP. 
+                // We want the USER'S IP. Prioritize intent data.
+                const userIp = intent?.ip_address || '127.0.0.1'
+
                 // Prepare Customer
                 const customer = {
                     name: 'Cliente', // Webhook usually lacks name
                     email: userEmail,
                     phone: intent?.phone || null,
                     document: null,
-                    ip: intent?.ip_address || null
+                    ip: userIp
                 }
 
                 // Prepare UTMs (From Intent)

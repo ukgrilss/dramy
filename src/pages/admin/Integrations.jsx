@@ -210,37 +210,41 @@ export default function Integrations() {
                                 )}
                             </div>
 
-                            {/* Event Name */}
-                            <div>
-                                <label className="block text-sm font-bold text-gray-300 mb-2 flex items-center gap-2">
-                                    <Activity className="w-4 h-4 text-primary" />
-                                    Nome do Evento
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.event_name}
-                                    onChange={(e) => setFormData({ ...formData, event_name: e.target.value })}
-                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary"
-                                    placeholder="Ex: purchase"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">Geralmente "purchase" ou "conversion".</p>
-                            </div>
 
-                            {/* Environment */}
-                            <div>
-                                <label className="block text-sm font-bold text-gray-300 mb-2 flex items-center gap-2">
-                                    <Globe className="w-4 h-4 text-primary" />
-                                    Ambiente
-                                </label>
-                                <select
-                                    value={formData.environment}
-                                    onChange={(e) => setFormData({ ...formData, environment: e.target.value })}
-                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary"
-                                >
-                                    <option value="production">Produção (Enviar dados reais)</option>
-                                    <option value="sandbox">Sandbox (Teste)</option>
-                                </select>
-                            </div>
+                            {/* Event Name & Environment - HIDDEN for UTMify (Strict Control) */}
+                            {integrations.find(i => i.id === configuring)?.name !== 'utmify' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-300 mb-2 flex items-center gap-2">
+                                            <Activity className="w-4 h-4 text-primary" />
+                                            Nome do Evento
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.event_name}
+                                            onChange={(e) => setFormData({ ...formData, event_name: e.target.value })}
+                                            className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary"
+                                            placeholder="Ex: purchase"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Geralmente "purchase" ou "conversion".</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-300 mb-2 flex items-center gap-2">
+                                            <Globe className="w-4 h-4 text-primary" />
+                                            Ambiente
+                                        </label>
+                                        <select
+                                            value={formData.environment}
+                                            onChange={(e) => setFormData({ ...formData, environment: e.target.value })}
+                                            className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary"
+                                        >
+                                            <option value="production">Produção (Enviar dados reais)</option>
+                                            <option value="sandbox">Sandbox (Teste)</option>
+                                        </select>
+                                    </div>
+                                </>
+                            )}
 
                             {/* Enabled Events */}
                             <div>

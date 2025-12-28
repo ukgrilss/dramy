@@ -83,7 +83,7 @@ export async function sendUtmifyOrder({
         phone: customer.phone || null,
         document: customer.document || null,
         country: 'BR',
-        ip: customer.ip || null
+        ip: customer.ip || '127.0.0.1' // 🛡️ STRICT RULE: Never NULL. Default to localhost if missing.
     }
 
     // 4. Construct Final Payload

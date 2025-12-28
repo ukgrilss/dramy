@@ -82,13 +82,18 @@ export default async function handler(req, res) {
                     utmifyStatus = 'paid'
                 }
 
+                // IP Detection (Strict User Rule)
+                const safeIp = req.headers['x-forwarded-for']?.split(',')[0] ||
+                    req.socket?.remoteAddress ||
+                    '127.0.0.1'
+
                 // Prepare Customer
                 const customer = {
                     name: payload?.name || userProfile.name, // Service converts undefined to default
                     email: payload?.email || userProfile.email,
                     phone: payload?.phone || userProfile.phone,
                     document: payload?.document || userProfile.cpf,
-                    ip: payload?.client_ip
+                    ip: payload?.client_ip || safeIp
                 }
 
                 // Prepare UTMs
