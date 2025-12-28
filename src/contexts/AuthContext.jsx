@@ -169,6 +169,16 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
+    const refreshProfile = async () => {
+        if (user) {
+            const data = await fetchUserRole(user.id)
+            if (data) {
+                setProfile(data) // ⚡ CRITICAL: Update global state!
+            }
+            return data
+        }
+    }
+
     const value = {
         user,
         userRole,
@@ -177,7 +187,8 @@ export const AuthProvider = ({ children }) => {
         signUp,
         signIn,
         signOut,
-        decrementTrial
+        decrementTrial,
+        refreshProfile // NEW: Allow manual refresh
     }
 
     return (

@@ -14,7 +14,7 @@ export default function PaymentModal({ plan, onClose }) {
     const [qrCodeUrl, setQrCodeUrl] = useState(null)
     const [mobileTab, setMobileTab] = useState('payment') // 'payment' | 'details'
     const navigate = useNavigate()
-    const { user } = useAuth()
+    const { user, refreshProfile } = useAuth() // Get refresh trigger
 
     useEffect(() => {
         if (plan) {
@@ -44,9 +44,10 @@ export default function PaymentModal({ plan, onClose }) {
                     table: 'profiles',
                     filter: `id=eq.${user.id}`
                 },
-                (payload) => {
+                async (payload) => {
                     // Check if subscription became active
                     if (payload.new.subscription_active === true) {
+                        await refreshProfile() // 🔄 SYNC GLOBAL STATE
                         setActivating(false)
                         setStep('success')
                     }
@@ -73,6 +74,7 @@ export default function PaymentModal({ plan, onClose }) {
                 .single()
 
             if (data?.subscription_active === true) {
+                await refreshProfile() // 🔄 SYNC GLOBAL STATE
                 setActivating(false)
                 setStep('success')
             }
