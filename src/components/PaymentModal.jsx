@@ -127,6 +127,36 @@ export default function PaymentModal({ plan, onClose }) {
                         email: user.email,
                         plan_slug: plan.slug
                     })
+
+                // ⚡ TRACK EVENTS: pix_created & pix_pending (Server-to-Server)
+                // We send this to our backend to keep logic secure and handle UTMify
+                fetch('/api/track-event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event: 'pix_created',
+                        transactionId: data.id,
+                        userId: user.id,
+                        payload: {
+                            value: amountInCents / 100,
+                            email: user.email
+                        }
+                    })
+                }).catch(err => console.error('Tracking pix_created error:', err))
+
+                fetch('/api/track-event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event: 'pix_pending',
+                        transactionId: data.id,
+                        userId: user.id,
+                        payload: {
+                            value: amountInCents / 100,
+                            email: user.email
+                        }
+                    })
+                }).catch(err => console.error('Tracking pix_pending error:', err))
             }
 
             await supabase

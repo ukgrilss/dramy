@@ -42,7 +42,8 @@ export default function Integrations() {
             enabled: integration.enabled,
             api_key: integration.config?.api_key || '',
             event_name: integration.config?.event_name || 'purchase',
-            environment: integration.config?.environment || 'production'
+            environment: integration.config?.environment || 'production',
+            enabled_events: integration.enabled_events || ['purchase']
         })
     }
 
@@ -53,6 +54,7 @@ export default function Integrations() {
             // Prepare update
             const updateData = {
                 enabled: formData.enabled === true || formData.enabled === 'true', // Ensure boolean
+                enabled_events: formData.enabled_events,
                 config: {
                     api_key: formData.api_key,
                     event_name: formData.event_name,
@@ -230,6 +232,44 @@ export default function Integrations() {
                                     <option value="production">Produção (Enviar dados reais)</option>
                                     <option value="sandbox">Sandbox (Teste)</option>
                                 </select>
+                            </div>
+
+                            {/* Enabled Events */}
+                            <div>
+                                <label className="block text-sm font-bold text-gray-300 mb-2 flex items-center gap-2">
+                                    <Activity className="w-4 h-4 text-primary" />
+                                    Eventos para Enviar
+                                </label>
+                                <div className="grid grid-cols-1 gap-2 bg-black/50 border border-white/10 rounded-lg p-3">
+                                    {[
+                                        { id: 'lead_created', label: 'Lead Criado (Cadastro)' },
+                                        { id: 'pix_created', label: 'Pix Gerado' },
+                                        { id: 'pix_pending', label: 'Pix Pendente' },
+                                        { id: 'purchase', label: 'Compra Aprovada (Pago)' },
+                                        { id: 'subscription_active', label: 'Assinatura Ativada' }
+                                    ].map((evt) => (
+                                        <label key={evt.id} className="flex items-center gap-3 cursor-pointer p-2 hover:bg-white/5 rounded transition-colors">
+                                            <div className="relative flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.enabled_events?.includes(evt.id)}
+                                                    onChange={(e) => {
+                                                        const current = formData.enabled_events || []
+                                                        if (e.target.checked) {
+                                                            setFormData({ ...formData, enabled_events: [...current, evt.id] })
+                                                        } else {
+                                                            setFormData({ ...formData, enabled_events: current.filter(id => id !== evt.id) })
+                                                        }
+                                                    }}
+                                                    className="peer h-4 w-4 bg-gray-800 border-gray-600 rounded focus:ring-primary focus:ring-1 checked:bg-primary checked:border-primary appearance-none transition-all"
+                                                />
+                                                <CheckCircle className="w-3 h-3 text-white absolute top-0.5 left-0.5 opacity-0 peer-checked:opacity-100 pointer-events-none" />
+                                            </div>
+                                            <span className="text-sm text-gray-300 select-none">{evt.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">Selecione quais etapas do funil você deseja rastrear.</p>
                             </div>
 
                         </div>

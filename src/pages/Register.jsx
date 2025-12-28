@@ -62,13 +62,44 @@ export default function Register() {
         setLoading(true)
 
         try {
+            // 1. Capture UTMs from URL
+            const utmParams = {
+                utm_source: searchParams.get('utm_source') || '',
+                utm_medium: searchParams.get('utm_medium') || '',
+                utm_campaign: searchParams.get('utm_campaign') || '',
+                utm_content: searchParams.get('utm_content') || '',
+                utm_term: searchParams.get('utm_term') || ''
+            }
+
+            // 2. SignUp
             const result = await signUp(email, password, name)
 
-            // If trial mode, activate trial
-            if (isTrial && result?.user?.id) {
-                const trialResult = await activateFreeTrial(result.user.id)
-                if (trialResult?.success) {
-                    localStorage.setItem('dramy_trial_used', 'true') // ⚡ Mark device as used
+            if (result?.user?.id) {
+                const userId = result.user.id
+
+                // 3. Save UTMs to Profile (Async, non-blocking flow but important)
+                await supabase.from('profiles').update(utmParams).eq('id', userId)
+
+                // 4. Track 'lead_created' (Server-to-Server)
+                fetch('/api/track-event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event: 'lead_created',
+                        userId: userId,
+                        payload: {
+                            email: email,
+                            ...utmParams
+                        }
+                    })
+                }).catch(err => console.error('Tracking Error:', err))
+
+                // 5. Activate Trial if needed
+                if (isTrial) {
+                    const trialResult = await activateFreeTrial(userId)
+                    if (trialResult?.success) {
+                        localStorage.setItem('dramy_trial_used', 'true')
+                    }
                 }
             }
 

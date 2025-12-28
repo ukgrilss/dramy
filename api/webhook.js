@@ -109,82 +109,102 @@ export default async function handler(req, res) {
 
                 if (activeIntegrations && activeIntegrations.length > 0) {
 
+                    // ⚡ FETCH UTMs FROM PROFILE (Since we saved them at Registration)
+                    // This ensures we have the original attribution source even for the purchase event
+                    let profileUtms = {}
+                    if (userEmail) {
+                        const { data: pData } = await supabase
+                            .from('profiles')
+                            .select('utm_source, utm_medium, utm_campaign, utm_content, utm_term, phone')
+                            .eq('email', userEmail)
+                            .single()
+                        if (pData) profileUtms = pData
+                    }
+
                     // Fetch full intent data including UTMs if not already strictly present
-                    // (We already fetched 'intent' above, so we use it)
                     const conversionData = {
                         transaction_id: txId,
                         value: paymentData.value ? (paymentData.value / 100) : 0, // Convert cents to real
                         currency: 'BRL',
                         email: userEmail,
-                        phone: intent?.phone || '', // Need to ensure phone is captured in intents if possible
-                        utm_source: intent?.utm_source || '',
-                        utm_campaign: intent?.utm_campaign || '',
-                        utm_medium: intent?.utm_medium || '',
-                        utm_content: intent?.utm_content || '',
-                        utm_term: intent?.utm_term || '',
+                        phone: profileUtms.phone || intent?.phone || '',
+                        utm_source: profileUtms.utm_source || intent?.utm_source || '',
+                        utm_campaign: profileUtms.utm_campaign || intent?.utm_campaign || '',
+                        utm_medium: profileUtms.utm_medium || intent?.utm_medium || '',
+                        utm_content: profileUtms.utm_content || intent?.utm_content || '',
+                        utm_term: profileUtms.utm_term || intent?.utm_term || '',
                         client_ip: intent?.ip_address || ''
                     }
 
+                    // Events to consider sending in this Webhook context
+                    const eventsToSend = ['purchase', 'subscription_active']
+
                     for (const integration of activeIntegrations) {
-                        // B. IDEMPOTENCY CHECK
-                        // Check if we already sent this specific integration for this specific transaction
-                        const { data: existingLog } = await supabase
-                            .from('integration_logs')
-                            .select('id')
-                            .eq('transaction_id', txId)
-                            .eq('integration_name', integration.name)
-                            .eq('status', 'success')
-                            .single()
+                        const enabledEvents = integration.enabled_events || []
 
-                        if (existingLog) {
-                            console.log(`Skipping ${integration.name} for ${txId} - Already Sent`)
-                            continue
-                        }
+                        for (const eventName of eventsToSend) {
 
-                        // C. SEND TO UTMIFY
-                        if (integration.name === 'utmify') {
-                            const config = integration.config
-                            // Construct Payload
-                            const payload = {
-                                event: config.event_name || 'purchase',
-                                transaction_id: conversionData.transaction_id,
-                                value: conversionData.value,
-                                currency: conversionData.currency,
-                                email: conversionData.email,
-                                phone: conversionData.phone,
-                                utm_source: conversionData.utm_source,
-                                utm_campaign: conversionData.utm_campaign,
-                                utm_medium: conversionData.utm_medium,
-                                utm_content: conversionData.utm_content,
-                                utm_term: conversionData.utm_term
+                            // Check if event is enabled for this integration
+                            if (!enabledEvents.includes(eventName)) continue
+
+                            // B. IDEMPOTENCY CHECK
+                            const { data: existingLog } = await supabase
+                                .from('integration_logs')
+                                .select('id')
+                                .eq('transaction_id', txId)
+                                .eq('integration_name', integration.name)
+                                .eq('event_name', eventName)
+                                .eq('status', 'success')
+                                .single()
+
+                            if (existingLog) {
+                                console.log(`Skipping ${integration.name}:${eventName} for ${txId} - Already Sent`)
+                                continue
                             }
 
-                            // Send Request
-                            // Note: fetch is available in Vercel Serverless environment
-                            const response = await fetch('https://api.utmify.com.br/v1/conversions', { // Fictional URL, user provided generic example, using common standard
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'x-api-key': config.api_key // Assuming Header Auth based on user prompt 'Authorization: Bearer' or custom
-                                    // User prompt said "Authorization: Bearer API_KEY", adjusting:
-                                    // 'Authorization': `Bearer ${config.api_key}`
-                                },
-                                body: JSON.stringify(payload)
-                            })
+                            // C. SEND TO UTMIFY
+                            if (integration.name === 'utmify') {
+                                const config = integration.config
+                                // Construct Payload
+                                const payload = {
+                                    event: eventName, // 'purchase' or 'subscription_active'
+                                    transaction_id: conversionData.transaction_id,
+                                    value: conversionData.value, // Send value for purchase? usually yes. For sub_active maybe too.
+                                    currency: conversionData.currency,
+                                    email: conversionData.email,
+                                    phone: conversionData.phone,
+                                    utm_source: conversionData.utm_source,
+                                    utm_campaign: conversionData.utm_campaign,
+                                    utm_medium: conversionData.utm_medium,
+                                    utm_content: conversionData.utm_content,
+                                    utm_term: conversionData.utm_term
+                                }
 
-                            const respJson = await response.json().catch(() => ({}))
-                            const success = response.ok
+                                // Send Request
+                                const response = await fetch('https://api.utmify.com.br/v1/conversions', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'x-api-key': config.api_key
+                                    },
+                                    body: JSON.stringify(payload)
+                                })
 
-                            // D. LOG RESULT
-                            await supabase.from('integration_logs').insert({
-                                transaction_id: txId,
-                                integration_name: integration.name,
-                                status: success ? 'success' : 'failed',
-                                payload: payload,
-                                response: respJson
-                            })
+                                const respJson = await response.json().catch(() => ({}))
+                                const success = response.ok
+
+                                // D. LOG RESULT
+                                await supabase.from('integration_logs').insert({
+                                    transaction_id: txId,
+                                    integration_name: integration.name,
+                                    event_name: eventName,
+                                    status: success ? 'success' : 'failed',
+                                    payload: payload,
+                                    response: respJson
+                                })
+                            }
+                            // Add other integrations here
                         }
-                        // Add other integrations here (else if ...)
                     }
                 }
             } catch (integrationError) {
