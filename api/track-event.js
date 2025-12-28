@@ -81,88 +81,89 @@ export default async function handler(req, res) {
 
             // SEND TO UTMIFY
             if (integration.name === 'utmify') {
-                const config = integration.config
-                const valueInCents = Math.round((payload?.value || 0) * 100)
-                const nowIso = new Date().toISOString()
+                try {
+                    const config = integration.config
+                    const valueInCents = Math.round((payload?.value || 0) * 100)
+                    const nowIso = new Date().toISOString()
 
-                // Determine Status based on event
-                let orderStatus = 'waiting_payment'
-                if (event === 'purchase' || event === 'subscription_active') orderStatus = 'paid'
+                    // Determine Status based on event
+                    let orderStatus = 'waiting_payment'
+                    if (event === 'purchase' || event === 'subscription_active') orderStatus = 'paid'
 
-                const trackPayload = {
-                    platform: 'PushinPay',
-                    orderId: transactionId,
-                    paymentMethod: 'pix',
-                    status: orderStatus,
-                    approvedDate: nowIso,
-                    createdAt: nowIso,
-                    token: config.api_key, // Keep in body just in case
-                    customer: {
-                        name: payload?.name || 'Cliente', // Front should send name, or default
-                        email: payload?.email,
-                        phone: payload?.phone,
-                        document: payload?.document || null,
-                        ip: payload?.client_ip || '127.0.0.1'
-                    },
-                    products: [{
-                        planId: 'plan_1',
-                        id: 'plan_1',
-                        planName: 'Assinatura',
-                        name: 'Assinatura',
-                        priceInCents: valueInCents,
-                        quantity: 1
-                    }],
-                    commission: {
-                        userCommissionInCents: 0,
-                        platformCommissionInCents: 0,
-                        gatewayFeeInCents: 0,
-                        totalPriceInCents: valueInCents
-                    },
-                    trackingParameters: {
-                        utm_source: payload?.utm_source,
-                        utm_campaign: payload?.utm_campaign,
-                        utm_medium: payload?.utm_medium,
-                        utm_content: payload?.utm_content,
-                        utm_term: payload?.utm_term
+                    const trackPayload = {
+                        platform: 'PushinPay',
+                        orderId: transactionId,
+                        paymentMethod: 'pix',
+                        status: orderStatus,
+                        approvedDate: nowIso,
+                        createdAt: nowIso,
+                        token: config.api_key, // Keep in body just in case
+                        customer: {
+                            name: payload?.name || 'Cliente', // Front should send name, or default
+                            email: payload?.email,
+                            phone: payload?.phone,
+                            document: payload?.document || null,
+                            ip: payload?.client_ip || '127.0.0.1'
+                        },
+                        products: [{
+                            planId: 'plan_1',
+                            id: 'plan_1',
+                            planName: 'Assinatura',
+                            name: 'Assinatura',
+                            priceInCents: valueInCents,
+                            quantity: 1
+                        }],
+                        commission: {
+                            userCommissionInCents: 0,
+                            platformCommissionInCents: 0,
+                            gatewayFeeInCents: 0,
+                            totalPriceInCents: valueInCents
+                        },
+                        trackingParameters: {
+                            utm_source: payload?.utm_source,
+                            utm_campaign: payload?.utm_campaign,
+                            utm_medium: payload?.utm_medium,
+                            utm_content: payload?.utm_content,
+                            utm_term: payload?.utm_term
+                        }
                     }
+
+                    // 9. CORRECT ENDPOINT
+                    const response = await fetch('https://api.utmify.com.br/api-credentials/orders', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-api-token': config.api_key
+                        },
+                        body: JSON.stringify(trackPayload)
+                    })
+
+                    const respJson = await response.json().catch(() => ({}))
+                    const success = response.ok
+
+                    // Log Result
+                    await supabase.from('integration_logs').insert({
+                        transaction_id: uniqueKey,
+                        integration_name: integration.name,
+                        event_name: event,
+                        status: success ? 'success' : 'failed',
+                        payload: trackPayload,
+                        response: respJson
+                    })
+
+                    results.push({ name: integration.name, status: success ? 'sent' : 'failed' })
+
+                } catch (err) {
+                    console.error('Integration Error:', err)
+                    results.push({ name: integration.name, status: 'error', error: err.message })
                 }
-
-                // 9. CORRECT ENDPOINT
-                const response = await fetch('https://api.utmify.com.br/api-credentials/orders', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-token': config.api_key
-                    },
-                    body: JSON.stringify(trackPayload)
-                })
-
-                const respJson = await response.json().catch(() => ({}))
-                const success = response.ok
-
-                // Log Result
-                await supabase.from('integration_logs').insert({
-                    transaction_id: uniqueKey,
-                    integration_name: integration.name,
-                    event_name: event,
-                    status: success ? 'success' : 'failed',
-                    payload: trackPayload,
-                    response: respJson
-                })
-
-                results.push({ name: integration.name, status: success ? 'sent' : 'failed' })
-
-            } catch (err) {
-                console.error('Integration Error:', err)
-                results.push({ name: integration.name, status: 'error', error: err.message })
             }
         }
-    }
 
         return res.status(200).json({ success: true, results })
 
-} catch (err) {
-    console.error('Track API Error:', err)
-    return res.status(500).json({ error: err.message })
-}
+    } catch (err) {
+        console.error('Track API Error:', err)
+        return res.status(500).json({ error: err.message })
+    }
 }
