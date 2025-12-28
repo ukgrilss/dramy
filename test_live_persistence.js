@@ -19,26 +19,26 @@ async function runTest() {
     console.log("--- SENDING FAKE LIVE SALE ---")
 
     const payload = {
-        platform: 'Custom', // Changing from PushinPay
-        orderId: 'TEST_LIVE_' + Date.now(),
+        platform: 'Custom',
+        orderId: 'TEST_WAITING_' + Date.now(),
         paymentMethod: 'pix',
-        status: 'paid', // ⚡ FORCE PAID TO SEE IF IT SHOWS
-        approvedDate: new Date().toISOString(),
+        status: 'waiting_payment', // ⚡ TEST PENDING STATUS
+        approvedDate: null, // ⚡ SHOULD BE NULL FOR PENDING?
         createdAt: new Date().toISOString(),
         token: API_KEY,
         customer: {
-            name: 'Teste De Painel',
-            email: 'teste_painel@exemplo.com',
+            name: 'Teste Pendente REAL',
+            email: 'teste_pendente@exemplo.com',
             phone: '5511999999999',
-            document: '11122233344',
+            document: '11122233344', // Valid-ish CPF
             ip: '127.0.0.1'
         },
         products: [{
-            planId: 'test_1',
-            id: 'test_1',
-            planName: 'Teste Painel R$ 1,50',
-            name: 'Teste Painel R$ 1,50',
-            priceInCents: 150, // R$ 1,50
+            planId: 'test_2',
+            id: 'test_2',
+            planName: 'Teste Pendente R$ 2,00',
+            name: 'Teste Pendente R$ 2,00',
+            priceInCents: 200, // R$ 2,00
             quantity: 1
         }],
         commission: {

@@ -94,47 +94,34 @@ export default async function handler(req, res) {
             if (integration.name === 'utmify') {
                 try {
                     const config = integration.config
+                    // ⚙️ SPECS: Configurable Endpoint (Default to documented standard if missing)
+                    const endpoint = config.endpoint || process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api/orders'
+
                     const valueInCents = Math.round((payload?.value || 0) * 100)
                     const nowIso = new Date().toISOString()
 
                     // Determine Status based on event
-                    let orderStatus = 'waiting_payment' // Reverted to valid status
+                    let orderStatus = 'waiting_payment'
                     if (event === 'purchase' || event === 'subscription_active') orderStatus = 'paid'
 
-                    // 🛡️ Robust Customer Data Construction
+                    // 🛡️ User Data
                     const customerName = payload?.name || userProfile.name || 'Cliente'
                     const customerEmail = payload?.email || userProfile.email || 'email@naoinformado.com'
-                    const customerPhone = payload?.phone || userProfile.phone || '5511999999999' // Fallback required by UTMify
+                    const customerPhone = payload?.phone || userProfile.phone || null // Spec says "optional" but safer to send if have
                     const customerDoc = payload?.document || userProfile.cpf || null
 
+                    // 📦 STRICT PAYLOAD (As per Senior Dev Spec)
                     const trackPayload = {
-                        platform: 'Custom', // Changed to Custom to ensure visibility
+                        event: event, // "event" field inside body
+                        platform: 'Custom',
                         orderId: transactionId,
                         paymentMethod: 'pix',
                         status: orderStatus,
-                        approvedDate: nowIso,
-                        createdAt: nowIso,
-                        token: config.api_key, // Keep in body just in case
+                        totalPriceInCents: valueInCents,
                         customer: {
-                            name: customerName,
                             email: customerEmail,
                             phone: customerPhone,
-                            document: customerDoc,
-                            ip: payload?.client_ip || '127.0.0.1'
-                        },
-                        products: [{
-                            planId: 'plan_1',
-                            id: 'plan_1',
-                            planName: 'Assinatura',
-                            name: 'Assinatura',
-                            priceInCents: valueInCents,
-                            quantity: 1
-                        }],
-                        commission: {
-                            userCommissionInCents: 0,
-                            platformCommissionInCents: 0,
-                            gatewayFeeInCents: 0,
-                            totalPriceInCents: valueInCents
+                            ip: payload?.client_ip || null // "ip_real_ou_null"
                         },
                         trackingParameters: {
                             utm_source: payload?.utm_source || null,
@@ -145,12 +132,12 @@ export default async function handler(req, res) {
                         }
                     }
 
-                    // 9. CORRECT ENDPOINT
-                    const response = await fetch('https://api.utmify.com.br/api-credentials/orders', {
+                    // 🚀 SEND REQUEST (Strict Headers)
+                    const response = await fetch(endpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'x-api-token': config.api_key
+                            'Authorization': `Bearer ${config.api_key}` // ⚠️ CHANGED TO BEARER
                         },
                         body: JSON.stringify(trackPayload)
                     })

@@ -170,41 +170,26 @@ export default async function handler(req, res) {
                             // C. SEND TO UTMIFY
                             if (integration.name === 'utmify') {
                                 const config = integration.config
+                                // ⚙️ SPECS: Configurable Endpoint
+                                const endpoint = config.endpoint || process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api/orders'
+
                                 const valueInCents = Math.round((conversionData.value || 0) * 100)
-                                const nowIso = new Date().toISOString()
 
                                 let orderStatus = 'paid' // Webhooks are usually for paid/approved
                                 if (eventName === 'pix_created') orderStatus = 'waiting_payment'
 
-                                // Construct Payload
+                                // 📦 STRICT PAYLOAD (As per Senior Dev Spec)
                                 const payload = {
+                                    event: eventName, // "event" field
                                     platform: 'Custom',
                                     orderId: conversionData.transaction_id,
                                     paymentMethod: 'pix',
                                     status: orderStatus,
-                                    approvedDate: nowIso,
-                                    createdAt: nowIso,
-                                    token: config.api_key,
+                                    totalPriceInCents: valueInCents,
                                     customer: {
-                                        name: conversionData.name || 'Cliente', // Webhook usually has name
                                         email: conversionData.email,
                                         phone: conversionData.phone,
-                                        document: conversionData.document || null,
-                                        ip: conversionData.client_ip || '127.0.0.1'
-                                    },
-                                    products: [{
-                                        planId: 'plan_1',
-                                        id: 'plan_1',
-                                        planName: 'Assinatura',
-                                        name: 'Assinatura',
-                                        priceInCents: valueInCents,
-                                        quantity: 1
-                                    }],
-                                    commission: {
-                                        userCommissionInCents: 0,
-                                        platformCommissionInCents: 0,
-                                        gatewayFeeInCents: 0,
-                                        totalPriceInCents: valueInCents
+                                        ip: conversionData.client_ip || null
                                     },
                                     trackingParameters: {
                                         utm_source: conversionData.utm_source || null,
@@ -215,12 +200,12 @@ export default async function handler(req, res) {
                                     }
                                 }
 
-                                // Send Request
-                                const response = await fetch('https://api.utmify.com.br/api-credentials/orders', {
+                                // 🚀 SEND REQUEST
+                                const response = await fetch(endpoint, {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
-                                        'x-api-token': config.api_key
+                                        'Authorization': `Bearer ${config.api_key}` // ⚠️ CHANGED TO BEARER
                                     },
                                     body: JSON.stringify(payload)
                                 })
