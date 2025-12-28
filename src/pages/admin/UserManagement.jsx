@@ -262,6 +262,16 @@ export default function UserManagement() {
             render: (value, row) => (
                 <div className="flex items-center justify-end gap-2">
                     <button
+                        onClick={() => {
+                            setReprocessId('') // Clear previous
+                            setShowReprocessModal(true)
+                        }}
+                        className="p-1.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors"
+                        title="Reprocessar Pagamento Manualmente"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                    </button>
+                    <button
                         onClick={() => handleManage(row)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-lg transition-colors"
                     >
@@ -288,14 +298,6 @@ export default function UserManagement() {
                     <p className="text-gray-400">Gerencie todos os usuários e suas assinaturas.</p>
                 </div>
                 <div className="flex gap-4 items-center">
-                    <button
-                        onClick={() => setShowReprocessModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold transition-all h-fit"
-                    >
-                        <RefreshCw className="w-4 h-4" />
-                        Reprocessar
-                    </button>
-
                     <div className="px-4 py-2 bg-white/5 rounded-lg border border-white/10 text-center">
                         <span className="block text-2xl font-bold text-white">{stats.total}</span>
                         <span className="text-xs text-gray-500">Total</span>

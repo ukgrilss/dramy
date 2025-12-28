@@ -290,7 +290,21 @@ export default function SubscriptionManagement() {
             header: 'Transaction ID',
             accessor: 'transaction_id',
             render: (value) => (
-                <span className="text-xs text-gray-400 font-mono">{value || '-'}</span>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 font-mono">{value || '-'}</span>
+                    {value && (
+                        <button
+                            onClick={() => {
+                                setReprocessId(value)
+                                setShowReprocessModal(true)
+                            }}
+                            className="p-1 hover:bg-white/10 rounded text-purple-400 transition-colors"
+                            title="Reprocessar este ID"
+                        >
+                            <RefreshCw className="w-3 h-3" />
+                        </button>
+                    )}
+                </div>
             )
         },
         {
@@ -349,13 +363,6 @@ export default function SubscriptionManagement() {
                     <h1 className="text-3xl font-black text-white mb-2">Gerenciamento de Assinaturas</h1>
                     <p className="text-gray-400">{subscriptions.length} assinaturas cadastradas</p>
                 </div>
-                <button
-                    onClick={() => setShowReprocessModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold transition-all"
-                >
-                    <RefreshCw className="w-4 h-4" />
-                    Reprocessar ID
-                </button>
             </div>
 
             {/* Stats */}
