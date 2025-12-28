@@ -95,7 +95,8 @@ function App() {
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-        </AuthProvider>
+            <Toaster position="top-right" richColors />
+        </AuthProvider >
     )
 }
 
