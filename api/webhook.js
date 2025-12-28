@@ -176,11 +176,11 @@ export default async function handler(req, res) {
                                 const valueInCents = Math.round((conversionData.value || 0) * 100)
 
                                 let orderStatus = 'paid' // Webhooks are usually for paid/approved
-                                if (eventName === 'pix_created') orderStatus = 'waiting_payment'
 
-                                // 📦 STRICT PAYLOAD (As per Senior Dev Spec)
+                                // 📦 STRICT PAYLOAD (Senior Dev Spec)
+                                // Note: pix_created is NOT handled here anymore, as per architecture rules.
                                 const payload = {
-                                    event: eventName, // "event" field
+                                    event: eventName,
                                     platform: 'Custom',
                                     orderId: conversionData.transaction_id,
                                     paymentMethod: 'pix',
@@ -188,7 +188,6 @@ export default async function handler(req, res) {
                                     totalPriceInCents: valueInCents,
                                     customer: {
                                         email: conversionData.email,
-                                        phone: conversionData.phone,
                                         ip: conversionData.client_ip || null
                                     },
                                     trackingParameters: {

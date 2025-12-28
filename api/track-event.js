@@ -110,9 +110,9 @@ export default async function handler(req, res) {
                     const customerPhone = payload?.phone || userProfile.phone || null // Spec says "optional" but safer to send if have
                     const customerDoc = payload?.document || userProfile.cpf || null
 
-                    // 📦 STRICT PAYLOAD (As per Senior Dev Spec)
+                    // 📦 STRICT PAYLOAD (Senior Dev Spec)
                     const trackPayload = {
-                        event: event, // "event" field inside body
+                        event: event,
                         platform: 'Custom',
                         orderId: transactionId,
                         paymentMethod: 'pix',
@@ -120,8 +120,7 @@ export default async function handler(req, res) {
                         totalPriceInCents: valueInCents,
                         customer: {
                             email: customerEmail,
-                            phone: customerPhone,
-                            ip: payload?.client_ip || null // "ip_real_ou_null"
+                            ip: payload?.client_ip || null
                         },
                         trackingParameters: {
                             utm_source: payload?.utm_source || null,
