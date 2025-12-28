@@ -60,36 +60,63 @@ async function handleTrackEvent(req, res) {
             // 1. PROCESS INTEGRATIONS (UTMify w/ ENV Priority)
             // =================================================================================
 
-            // A. UTMify ENV-ONLY MODE (Priority)
+            // A. UTMify ENV-ONLY MODE (Official Doc Compliance)
             if (process.env.UTMIFY_API_KEY) {
                 try {
                     console.log('[Local API] ⚡ UTMify Env Mode Active')
-                    const endpoint = process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api/orders'
+                    // ⚙️ SPECS: Official Doc Endpoint
+                    const endpoint = process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api-credentials/orders'
 
                     const valueInCents = Math.round((payload?.value || 0) * 100)
 
-                    let utmifyEvent = 'purchase'
                     let utmifyStatus = 'waiting_payment'
                     if (event === 'purchase' || event === 'subscription_active') utmifyStatus = 'paid'
 
+                    // 🕒 DATE FORMATTING (YYYY-MM-DD HH:MM:SS) - UTC
+                    const now = new Date()
+                    const formatDate = (date) => date.toISOString().replace('T', ' ').split('.')[0]
+                    const createdAt = formatDate(now)
+                    const approvedDate = utmifyStatus === 'paid' ? createdAt : null
+
+                    // 📦 STRICT OFFICIAL DOC PAYLOAD
                     const trackPayload = {
-                        event: utmifyEvent,
-                        platform: 'Custom',
                         orderId: transactionId,
+                        platform: 'Custom',
                         paymentMethod: 'pix',
                         status: utmifyStatus,
-                        totalPriceInCents: valueInCents,
+                        createdAt: createdAt,
+                        approvedDate: approvedDate,
+                        refundedAt: null,
                         customer: {
+                            name: payload?.name || 'Cliente',
                             email: payload?.email || 'email@naoinformado.com',
+                            phone: payload?.phone || null,
+                            document: payload?.document || null,
+                            country: 'BR',
                             ip: payload?.client_ip || null
                         },
+                        products: [{
+                            id: 'default-product',
+                            name: 'Produto Digital',
+                            planId: null,
+                            planName: null,
+                            quantity: 1,
+                            priceInCents: valueInCents
+                        }],
                         trackingParameters: {
+                            src: null, sck: null,
                             utm_source: payload?.utm_source || null,
                             utm_campaign: payload?.utm_campaign || null,
                             utm_medium: payload?.utm_medium || null,
                             utm_content: payload?.utm_content || null,
                             utm_term: payload?.utm_term || null
-                        }
+                        },
+                        commission: {
+                            totalPriceInCents: valueInCents,
+                            gatewayFeeInCents: 0,
+                            userCommissionInCents: valueInCents
+                        },
+                        isTest: false
                     }
 
                     // Idempotency (Env Mode Specific)
@@ -106,7 +133,7 @@ async function handleTrackEvent(req, res) {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${process.env.UTMIFY_API_KEY}`
+                                'x-api-token': process.env.UTMIFY_API_KEY // ⚠️ OFFICIAL HEADER
                             },
                             body: JSON.stringify(trackPayload)
                         })
@@ -114,6 +141,7 @@ async function handleTrackEvent(req, res) {
                         const success = response.ok
                         const respJson = await response.json().catch(() => ({}))
 
+                        // Log Result
                         await supabase.from('integration_logs').insert({
                             transaction_id: transactionId || `lead_${userId}`,
                             integration_name: 'utmify_env',

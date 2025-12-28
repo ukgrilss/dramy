@@ -101,9 +101,9 @@ export default async function handler(req, res) {
             // Logic: Backend only execution, Idempotency check, Error isolation
             // =================================================================================
             try {
-                // A. UTMify ENV-ONLY MODE (Priority)
+                // A. UTMify ENV-ONLY MODE (Official Doc Compliance)
                 if (process.env.UTMIFY_API_KEY) {
-                    const endpoint = process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api/orders'
+                    const endpoint = process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api-credentials/orders'
                     const eventsToSend = ['purchase', 'subscription_active'] // Webhook is always considered a purchase/conversion
 
                     for (const eventName of eventsToSend) {
@@ -123,28 +123,62 @@ export default async function handler(req, res) {
                                 continue
                             }
 
-                            const valueInCents = Math.round((conversionData.value || 0) * 100)
+                            const valueInCents = Math.round((paymentData.amount || 0)) // PushinPay sends amounts in cents usually, but verify if `value` or `amount`
 
-                            // 📦 STRICT EXTREME PAYLOAD (Senior Dev Spec)
+                            // We need to fetch intent data again to be sure about UTMs as they might not be passed in webhook
+                            const conversionData = intent || {
+                                transaction_id: txId,
+                                email: userEmail,
+                                value: paymentData.amount ? paymentData.amount / 100 : 0
+                            }
+
+                            // 🕒 DATE FORMATTING (YYYY-MM-DD HH:MM:SS) - UTC
+                            const now = new Date()
+                            const formatDate = (date) => date.toISOString().replace('T', ' ').split('.')[0]
+                            const approvedDate = formatDate(now)
+
+                            // 📦 STRICT OFFICIAL DOC PAYLOAD
                             // Webhook always means "Paid"
                             const payload = {
-                                event: 'purchase',
-                                platform: 'Custom',
                                 orderId: conversionData.transaction_id,
+                                platform: 'Custom',
                                 paymentMethod: 'pix',
                                 status: 'paid',
-                                totalPriceInCents: valueInCents,
+                                createdAt: approvedDate, // Assuming immediate payment or close enough
+                                approvedDate: approvedDate,
+                                refundedAt: null,
                                 customer: {
+                                    name: 'Cliente', // Webhook often lacks name unless queried, default safe
                                     email: conversionData.email,
+                                    phone: conversionData.phone || null,
+                                    document: null,
+                                    country: 'BR',
                                     ip: conversionData.client_ip || null
                                 },
+                                products: [
+                                    {
+                                        id: 'default-product',
+                                        name: 'Produto Digital',
+                                        planId: null,
+                                        planName: null,
+                                        quantity: 1,
+                                        priceInCents: valueInCents
+                                    }
+                                ],
                                 trackingParameters: {
+                                    src: null, sck: null,
                                     utm_source: conversionData.utm_source || null,
                                     utm_campaign: conversionData.utm_campaign || null,
                                     utm_medium: conversionData.utm_medium || null,
                                     utm_content: conversionData.utm_content || null,
                                     utm_term: conversionData.utm_term || null
-                                }
+                                },
+                                commission: {
+                                    totalPriceInCents: valueInCents,
+                                    gatewayFeeInCents: 0,
+                                    userCommissionInCents: valueInCents
+                                },
+                                isTest: false
                             }
 
                             // 🚀 SEND REQUEST
@@ -152,7 +186,7 @@ export default async function handler(req, res) {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${process.env.UTMIFY_API_KEY}` // ⚠️ STRICT ENV AUTH
+                                    'x-api-token': process.env.UTMIFY_API_KEY // ⚠️ OFFICIAL HEADER
                                 },
                                 body: JSON.stringify(payload)
                             })
