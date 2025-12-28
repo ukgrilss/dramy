@@ -75,7 +75,7 @@ export default async function handler(req, res) {
                 let result
 
                 if (replayPayload) {
-                    // PATH A: Strict Replay (Preferred)
+                    // PATH A: Strict Replay (Only Allowed Path)
                     // The payload is already perfect (same products, same commission, same everything).
                     // Just updated status.
                     result = await sendUtmifyOrder({
@@ -83,41 +83,17 @@ export default async function handler(req, res) {
                         rawPayload: replayPayload
                     })
                 } else {
-                    // PATH B: Fallback Construction (If log missing)
-                    // Must reconstruct manually as per original logic, but we prefer Replay.
-
-                    const valueInCents = Math.round((paymentData.amount || (intent?.amount || 0) * 100))
-                    const userIp = intent?.ip_address || '127.0.0.1'
-                    // Fallback createdAt determination
-                    const createdDateObj = intent?.created_at ? new Date(intent.created_at) : new Date()
-                    const fallbackCreatedAt = formatStatsDate(createdDateObj)
-
-                    const customer = {
-                        name: 'Cliente',
-                        email: userEmail,
-                        phone: intent?.phone || null,
-                        document: null,
-                        ip: userIp
+                    // PATH B: BLOCKED 🛑
+                    // We cannot reconstruct financial data safely without the original log.
+                    // Sending fake data (0 commission) breaks the integration logic.
+                    // Better to fail and debug than to send garbage.
+                    console.error(`[Webhook] CRITICAL: Strict Replay Failed for ${txId}. Original 'waiting_payment' log not found.`)
+                    // We define result as error to log it in integration_logs
+                    result = {
+                        success: false,
+                        error: 'strict_replay_failed_no_log',
+                        payload: null
                     }
-
-                    const utm = {
-                        utm_source: intent?.utm_source,
-                        utm_campaign: intent?.utm_campaign,
-                        utm_medium: intent?.utm_medium,
-                        utm_content: intent?.utm_content,
-                        utm_term: intent?.utm_term
-                    }
-
-                    result = await sendUtmifyOrder({
-                        orderId: txId,
-                        status: 'paid',
-                        valueInCents: valueInCents,
-                        createdAt: fallbackCreatedAt,
-                        approvedDate: approvedDate,
-                        customer,
-                        utm,
-                        eventName: 'webhook_paid_fallback'
-                    })
                 }
 
                 // Log Result
@@ -126,7 +102,7 @@ export default async function handler(req, res) {
                     integration_name: 'utmify_env',
                     event_name: 'purchase', // Standardize event name for dashboard? 'paid' is status.
                     status: result.success ? 'success' : 'failed',
-                    payload: result.payload,
+                    payload: result.payload || { error: 'no_payload_generated' },
                     response: result.response || { error: result.error }
                 })
             }
