@@ -120,10 +120,14 @@ export default async function handler(req, res) {
                 })
 
                 // Log Result
+                // STRICT PERSISTENCE: If sending 'waiting_payment', FORCE log event_name to 'pix_pending'
+                // This ensures the Webhook can find it later using the strict query.
+                const logEventName = utmifyStatus === 'waiting_payment' ? 'pix_pending' : event
+
                 await supabase.from('integration_logs').insert({
                     transaction_id: uniqueKey,
                     integration_name: 'utmify_env', // Explicitly logging as env mode
-                    event_name: event,
+                    event_name: logEventName, // ⚓ ANCHOR: stored as 'pix_pending'
                     status: result.success ? 'success' : 'failed',
                     payload: result.payload,
                     response: result.response || { error: result.error }
