@@ -207,11 +207,11 @@ export default async function handler(req, res) {
                                         totalPriceInCents: valueInCents
                                     },
                                     trackingParameters: {
-                                        utm_source: conversionData.utm_source,
-                                        utm_campaign: conversionData.utm_campaign,
-                                        utm_medium: conversionData.utm_medium,
-                                        utm_content: conversionData.utm_content,
-                                        utm_term: conversionData.utm_term
+                                        utm_source: conversionData.utm_source || null,
+                                        utm_campaign: conversionData.utm_campaign || null,
+                                        utm_medium: conversionData.utm_medium || null,
+                                        utm_content: conversionData.utm_content || null,
+                                        utm_term: conversionData.utm_term || null
                                     }
                                 }
 
