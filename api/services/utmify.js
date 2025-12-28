@@ -47,9 +47,9 @@ export async function sendUtmifyOrder({
     customer,
     utm,
     eventName,
-    // Overrides (for strict reuse)
-    overrideProducts,
-    overrideCommission
+    eventName,
+    // Strict Replay Mode
+    rawPayload
 }) {
     if (!process.env.UTMIFY_API_KEY) {
         console.warn('[UTMify] Skipped: Missing UTMIFY_API_KEY env var.')
@@ -58,61 +58,66 @@ export async function sendUtmifyOrder({
 
     const endpoint = 'https://api.utmify.com.br/api-credentials/orders'
 
-    // VALIDATION: Ensure strict payload compliance
-    // Products CANNOT be empty. Commission CANNOT be zero (if possible).
+    let payload = {}
 
-    // 1. Prepare Products Array (Mandatory)
-    // If override provided (from previous state), use it. Else generate default.
-    const products = overrideProducts || [{
-        id: 'main-subscription',
-        name: 'Assinatura Premium', // Generic name acceptable? User said "NomeDoSaaS" in platform
-        planId: 'monthly',
-        planName: 'Mensal',
-        quantity: 1,
-        priceInCents: valueInCents > 0 ? valueInCents : 1 // Never 0
-    }]
+    if (rawPayload) {
+        // 🛡️ STRICT REPLAY MODE: Trust the caller 100%
+        // Verify minimal requirement: status must be updated before passing here.
+        payload = rawPayload
+    } else {
+        // ... Standard Construction Logic ...
 
-    // 2. Prepare Commission (Mandatory)
-    // If override provided, use it. Else generate.
-    const commission = overrideCommission || {
-        totalPriceInCents: valueInCents,
-        gatewayFeeInCents: 0, // Unknown, safe to 0
-        userCommissionInCents: valueInCents // Cannot be 0 per specs if user received something.
-    }
+        // VALIDATION: Ensure strict payload compliance
+        // Products CANNOT be empty. Commission CANNOT be zero (if possible).
 
-    // 3. Prepare Customer (Mandatory)
-    // "name" cannot be null/empty. "email" cannot be null/empty.
-    const safeCustomer = {
-        name: customer.name || 'Cliente Desconhecido',
-        email: customer.email || 'email_nao_informado@user.com',
-        phone: customer.phone || null,
-        document: customer.document || null,
-        country: 'BR',
-        ip: customer.ip || '127.0.0.1' // 🛡️ STRICT RULE: Never NULL. Default to localhost if missing.
-    }
+        // 1. Prepare Products Array (Mandatory)
+        const products = [{
+            id: 'main-subscription',
+            name: 'Assinatura Premium', // Generic name acceptable? User said "NomeDoSaaS" in platform
+            planId: 'monthly',
+            planName: 'Mensal',
+            quantity: 1,
+            priceInCents: valueInCents > 0 ? valueInCents : 1 // Never 0
+        }]
 
-    // 4. Construct Final Payload
-    const payload = {
-        orderId: orderId,
-        platform: 'DramaFlix', // Hardcoded or Env? User example: "GlobalPay". Let's use SaaS Name.
-        paymentMethod: 'pix',
-        status: status, // 'waiting_payment' or 'paid'
-        createdAt: createdAt, // STRICT format passed from caller
-        approvedDate: approvedDate, // null or STRICT format
-        refundedAt: null,
-        customer: safeCustomer,
-        products: products,
-        trackingParameters: {
-            src: null,
-            sck: null,
-            utm_source: utm?.utm_source || null,
-            utm_campaign: utm?.utm_campaign || null,
-            utm_medium: utm?.utm_medium || null,
-            utm_content: utm?.utm_content || null,
-            utm_term: utm?.utm_term || null
-        },
-        commission: commission,
-        isTest: false
+        // 2. Prepare Commission (Mandatory)
+        const commission = {
+            totalPriceInCents: valueInCents,
+            gatewayFeeInCents: 0, // Unknown, safe to 0
+            userCommissionInCents: valueInCents // Cannot be 0 per specs if user received something.
+        }
+
+        // 3. Prepare Customer (Mandatory)
+        const safeCustomer = {
+            name: customer.name || 'Cliente Desconhecido',
+            email: customer.email || 'email_nao_informado@user.com',
+            phone: customer.phone || null,
+            document: customer.document || null,
+            ip: customer.ip || '127.0.0.1' // 🛡️ STRICT RULE: Never NULL. Default to localhost if missing.
+        }
+
+        // 4. Construct Final Payload
+        payload = {
+            orderId: orderId,
+            platform: 'DramaFlix',
+            paymentMethod: 'pix',
+            status: status,
+            createdAt: createdAt,
+            approvedDate: approvedDate,
+            refundedAt: null,
+            customer: safeCustomer,
+            products: products,
+            trackingParameters: {
+                src: null, sck: null,
+                utm_source: utm?.utm_source || null,
+                utm_campaign: utm?.utm_campaign || null,
+                utm_medium: utm?.utm_medium || null,
+                utm_content: utm?.utm_content || null,
+                utm_term: utm?.utm_term || null
+            },
+            commission: commission,
+            isTest: false
+        }
     }
 
     // --- LOG BEFORE SEND ---
