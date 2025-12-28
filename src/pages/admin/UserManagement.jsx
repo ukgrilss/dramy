@@ -308,7 +308,6 @@ export default function UserManagement() {
                         onClick={(e) => {
                             e.stopPropagation()
                             e.preventDefault()
-                            alert('CLICOU! Iniciando...') // VISUAL CONFIRMATION
                             handleAutoReprocess(row.email, e)
                         }}
                         disabled={reprocessing}
