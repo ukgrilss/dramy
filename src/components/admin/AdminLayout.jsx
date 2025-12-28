@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Film, List, LogOut, Search, CreditCard, MessageSquare, BarChart3, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Users, Film, List, LogOut, Search, CreditCard, MessageSquare, BarChart3, Menu, X, Webhook } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
 const AdminLayout = () => {
@@ -24,6 +24,7 @@ const AdminLayout = () => {
         { path: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
         { path: '/admin/series', icon: Film, label: 'Séries' },
         // { path: '/admin/categories', icon: List, label: 'Categorias' }, // REMOVED
+        { path: '/admin/integrations', icon: Webhook, label: 'Integrações' },
         { path: '/admin/users', icon: Users, label: 'Usuários' },
         { path: '/admin/suggestions', icon: MessageSquare, label: 'Sugestões' },
         { path: '/admin/plans', icon: CreditCard, label: 'Config. Pagamento' },

@@ -36,6 +36,7 @@ import CategoryManagement from './pages/admin/CategoryManagement'
 import Settings from './pages/admin/Settings'
 import Analytics from './pages/admin/Analytics'
 import Suggestions from './pages/admin/Suggestions'
+import Integrations from './pages/admin/Integrations'
 
 function App() {
     return (
@@ -82,6 +83,7 @@ function App() {
                     <Route path="series" element={<ContentManagement />} />
                     {/* <Route path="categories" element={<CategoryManagement />} /> */}
                     <Route path="users" element={<UserManagement />} />
+                    <Route path="integrations" element={<Integrations />} />
                     <Route path="suggestions" element={<Suggestions />} />
                     {/* Map "plans" to SubscriptionManagement */}
                     <Route path="plans" element={<SubscriptionManagement />} />
