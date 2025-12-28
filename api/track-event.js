@@ -84,7 +84,8 @@ export default async function handler(req, res) {
                 try {
                     const config = integration.config
                     const trackPayload = {
-                        event: event, // 'lead_created', 'pix_created', etc.
+                        token: config.api_key, // ⚡ ADD TOKEN TO BODY
+                        event: event,
                         transaction_id: transactionId,
                         user_id: userId,
                         value: payload?.value || 0,
@@ -102,6 +103,7 @@ export default async function handler(req, res) {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'token': config.api_key, // ⚡ TRY HEADER 'token'
                             'x-api-key': config.api_key
                         },
                         body: JSON.stringify(trackPayload)

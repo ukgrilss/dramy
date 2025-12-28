@@ -172,9 +172,10 @@ export default async function handler(req, res) {
                                 const config = integration.config
                                 // Construct Payload
                                 const payload = {
-                                    event: eventName, // 'purchase' or 'subscription_active'
+                                    token: config.api_key, // ⚡ ADD TOKEN TO BODY
+                                    event: eventName,
                                     transaction_id: conversionData.transaction_id,
-                                    value: conversionData.value, // Send value for purchase? usually yes. For sub_active maybe too.
+                                    value: conversionData.value,
                                     currency: conversionData.currency,
                                     email: conversionData.email,
                                     phone: conversionData.phone,
@@ -190,6 +191,7 @@ export default async function handler(req, res) {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
+                                        'token': config.api_key, // ⚡ TRY HEADER 'token'
                                         'x-api-key': config.api_key
                                     },
                                     body: JSON.stringify(payload)
