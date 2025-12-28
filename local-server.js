@@ -54,51 +54,30 @@ async function handleTrackEvent(req, res) {
                 return
             }
 
-            // 1. Fetch Integrations
-            const { data: activeIntegrations } = await supabase
-                .from('integrations')
-                .select('*')
-                .eq('enabled', true)
-
             const results = []
 
-            for (const integration of activeIntegrations || []) {
-                let enabledEvents = integration.enabled_events
-                if (!enabledEvents) enabledEvents = ['purchase', 'pix_created', 'lead_created', 'pix_pending', 'subscription_active']
+            // =================================================================================
+            // 1. PROCESS INTEGRATIONS (UTMify w/ ENV Priority)
+            // =================================================================================
 
-                if (!enabledEvents.includes(event)) {
-                    results.push({ name: integration.name, status: 'skipped (disabled)' })
-                    continue
-                }
-
-                const uniqueKey = transactionId || `lead_${userId}`
-
-                // Idempotency
-                const { data: existing } = await supabase.from('integration_logs')
-                    .select('id').eq('transaction_id', uniqueKey).eq('integration_name', integration.name).eq('event_name', event).eq('status', 'success').single()
-
-                if (existing) {
-                    results.push({ name: integration.name, status: 'skipped (idempotent)' })
-                    continue
-                }
-
-                // Send to UTMify
-                if (integration.name === 'utmify') {
-                    const config = integration.config
-                    const endpoint = config.endpoint || process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api/orders'
+            // A. UTMify ENV-ONLY MODE (Priority)
+            if (process.env.UTMIFY_API_KEY) {
+                try {
+                    console.log('[Local API] ⚡ UTMify Env Mode Active')
+                    const endpoint = process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api/orders'
 
                     const valueInCents = Math.round((payload?.value || 0) * 100)
 
-                    let orderStatus = 'waiting_payment'
-                    if (event === 'purchase' || event === 'subscription_active') orderStatus = 'paid'
+                    let utmifyEvent = 'purchase'
+                    let utmifyStatus = 'waiting_payment'
+                    if (event === 'purchase' || event === 'subscription_active') utmifyStatus = 'paid'
 
-                    // 📦 STRICT MINIMAL PAYLOAD (Senior Dev Spec)
                     const trackPayload = {
-                        event: event,
+                        event: utmifyEvent,
                         platform: 'Custom',
                         orderId: transactionId,
                         paymentMethod: 'pix',
-                        status: orderStatus,
+                        status: utmifyStatus,
                         totalPriceInCents: valueInCents,
                         customer: {
                             email: payload?.email || 'email@naoinformado.com',
@@ -113,26 +92,77 @@ async function handleTrackEvent(req, res) {
                         }
                     }
 
-                    console.log(`[Local API] Sending to UTMify:`, trackPayload)
+                    // Idempotency (Env Mode Specific)
+                    const { data: existing } = await supabase.from('integration_logs')
+                        .select('id')
+                        .eq('transaction_id', transactionId || `lead_${userId}`)
+                        .eq('integration_name', 'utmify_env')
+                        .eq('event_name', event)
+                        .eq('status', 'success')
+                        .single()
 
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${config.api_key}`
-                        },
-                        body: JSON.stringify(trackPayload)
-                    })
+                    if (!existing) {
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${process.env.UTMIFY_API_KEY}`
+                            },
+                            body: JSON.stringify(trackPayload)
+                        })
 
-                    const success = response.ok
-                    const respJson = await response.json().catch(() => ({}))
+                        const success = response.ok
+                        const respJson = await response.json().catch(() => ({}))
 
-                    await supabase.from('integration_logs').insert({
-                        transaction_id: uniqueKey, integration_name: integration.name, event_name: event, status: success ? 'success' : 'failed', payload: trackPayload, response: respJson
-                    })
+                        await supabase.from('integration_logs').insert({
+                            transaction_id: transactionId || `lead_${userId}`,
+                            integration_name: 'utmify_env',
+                            event_name: event,
+                            status: success ? 'success' : 'failed',
+                            payload: trackPayload,
+                            response: respJson
+                        })
 
-                    results.push({ name: integration.name, status: success ? 'sent' : 'failed' })
+                        results.push({ name: 'utmify', status: success ? 'sent' : 'failed' })
+                    } else {
+                        results.push({ name: 'utmify', status: 'idempotent_skip' })
+                    }
+                } catch (err) {
+                    console.error('[Local API] UTMify Error:', err)
+                    results.push({ name: 'utmify', status: 'error', error: err.message })
                 }
+            }
+
+            // =================================================================================
+            // 2. DB INTEGRATIONS
+            // =================================================================================
+            const { data: activeIntegrations } = await supabase
+                .from('integrations')
+                .select('*')
+                .eq('enabled', true)
+
+            for (const integration of activeIntegrations || []) {
+                if (process.env.UTMIFY_API_KEY && integration.name === 'utmify') continue // Skip if handled by Env
+
+                let enabledEvents = integration.enabled_events
+                if (!enabledEvents) enabledEvents = ['purchase', 'pix_created', 'lead_created', 'pix_pending', 'subscription_active']
+
+                if (!enabledEvents.includes(event)) {
+                    results.push({ name: integration.name, status: 'skipped (disabled)' })
+                    continue
+                }
+
+                const uniqueKey = transactionId || `lead_${userId}`
+
+                const { data: existing } = await supabase.from('integration_logs')
+                    .select('id').eq('transaction_id', uniqueKey).eq('integration_name', integration.name).eq('event_name', event).eq('status', 'success').single()
+
+                if (existing) {
+                    results.push({ name: integration.name, status: 'skipped (idempotent)' })
+                    continue
+                }
+
+                // Logic for OTHER integrations would go here (or UTMify if ENV var missing)
             }
 
             res.writeHead(200, { 'Content-Type': 'application/json' })

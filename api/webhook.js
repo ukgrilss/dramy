@@ -101,129 +101,92 @@ export default async function handler(req, res) {
             // Logic: Backend only execution, Idempotency check, Error isolation
             // =================================================================================
             try {
-                // A. Fetch Enabled Integrations
+                // A. UTMify ENV-ONLY MODE (Priority)
+                if (process.env.UTMIFY_API_KEY) {
+                    const endpoint = process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api/orders'
+                    const eventsToSend = ['purchase', 'subscription_active'] // Webhook is always considered a purchase/conversion
+
+                    for (const eventName of eventsToSend) {
+                        try {
+                            // IDEMPOTENCY CHECK (Env Mode)
+                            const { data: existingLog } = await supabase
+                                .from('integration_logs')
+                                .select('id')
+                                .eq('transaction_id', txId)
+                                .eq('integration_name', 'utmify_env')
+                                .eq('event_name', eventName)
+                                .eq('status', 'success')
+                                .single()
+
+                            if (existingLog) {
+                                console.log(`Skipping UTMify(Env):${eventName} for ${txId} - Already Sent`)
+                                continue
+                            }
+
+                            const valueInCents = Math.round((conversionData.value || 0) * 100)
+
+                            // 📦 STRICT EXTREME PAYLOAD (Senior Dev Spec)
+                            // Webhook always means "Paid"
+                            const payload = {
+                                event: 'purchase',
+                                platform: 'Custom',
+                                orderId: conversionData.transaction_id,
+                                paymentMethod: 'pix',
+                                status: 'paid',
+                                totalPriceInCents: valueInCents,
+                                customer: {
+                                    email: conversionData.email,
+                                    ip: conversionData.client_ip || null
+                                },
+                                trackingParameters: {
+                                    utm_source: conversionData.utm_source || null,
+                                    utm_campaign: conversionData.utm_campaign || null,
+                                    utm_medium: conversionData.utm_medium || null,
+                                    utm_content: conversionData.utm_content || null,
+                                    utm_term: conversionData.utm_term || null
+                                }
+                            }
+
+                            // 🚀 SEND REQUEST
+                            const response = await fetch(endpoint, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${process.env.UTMIFY_API_KEY}` // ⚠️ STRICT ENV AUTH
+                                },
+                                body: JSON.stringify(payload)
+                            })
+
+                            const respJson = await response.json().catch(() => ({}))
+                            const success = response.ok
+
+                            // LOG RESULT
+                            await supabase.from('integration_logs').insert({
+                                transaction_id: txId,
+                                integration_name: 'utmify_env',
+                                event_name: eventName,
+                                status: success ? 'success' : 'failed',
+                                payload: payload,
+                                response: respJson
+                            })
+
+                        } catch (err) {
+                            console.error('UTMify Env Logic Error:', err)
+                        }
+                    }
+                }
+
+                // B. OTHER DB INTEGRATIONS
                 const { data: activeIntegrations } = await supabase
                     .from('integrations')
                     .select('*')
                     .eq('enabled', true)
 
                 if (activeIntegrations && activeIntegrations.length > 0) {
-
-                    // ⚡ FETCH UTMs FROM PROFILE (Since we saved them at Registration)
-                    // This ensures we have the original attribution source even for the purchase event
-                    let profileUtms = {}
-                    if (userEmail) {
-                        const { data: pData } = await supabase
-                            .from('profiles')
-                            .select('utm_source, utm_medium, utm_campaign, utm_content, utm_term, phone')
-                            .eq('email', userEmail)
-                            .single()
-                        if (pData) profileUtms = pData
-                    }
-
-                    // Fetch full intent data including UTMs if not already strictly present
-                    const conversionData = {
-                        transaction_id: txId,
-                        value: paymentData.value ? (paymentData.value / 100) : 0, // Convert cents to real
-                        currency: 'BRL',
-                        email: userEmail,
-                        phone: profileUtms.phone || intent?.phone || '',
-                        utm_source: profileUtms.utm_source || intent?.utm_source || '',
-                        utm_campaign: profileUtms.utm_campaign || intent?.utm_campaign || '',
-                        utm_medium: profileUtms.utm_medium || intent?.utm_medium || '',
-                        utm_content: profileUtms.utm_content || intent?.utm_content || '',
-                        utm_term: profileUtms.utm_term || intent?.utm_term || '',
-                        client_ip: intent?.ip_address || ''
-                    }
-
-                    // Events to consider sending in this Webhook context
-                    const eventsToSend = ['purchase', 'subscription_active']
-
+                    // ... (Logic for other integrations)
                     for (const integration of activeIntegrations) {
-                        let enabledEvents = integration.enabled_events
-
-                        // 🛡️ FALLBACK: If column is missing, enable ALL
-                        if (!enabledEvents) {
-                            enabledEvents = ['purchase', 'subscription_active']
-                        }
-
-                        for (const eventName of eventsToSend) {
-
-                            // Check if event is enabled for this integration
-                            if (!enabledEvents.includes(eventName)) continue
-
-                            // B. IDEMPOTENCY CHECK
-                            const { data: existingLog } = await supabase
-                                .from('integration_logs')
-                                .select('id')
-                                .eq('transaction_id', txId)
-                                .eq('integration_name', integration.name)
-                                .eq('event_name', eventName)
-                                .eq('status', 'success')
-                                .single()
-
-                            if (existingLog) {
-                                console.log(`Skipping ${integration.name}:${eventName} for ${txId} - Already Sent`)
-                                continue
-                            }
-
-                            // C. SEND TO UTMIFY
-                            if (integration.name === 'utmify') {
-                                const config = integration.config
-                                // ⚙️ SPECS: Configurable Endpoint
-                                const endpoint = config.endpoint || process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api/orders'
-
-                                const valueInCents = Math.round((conversionData.value || 0) * 100)
-
-                                let orderStatus = 'paid' // Webhooks are usually for paid/approved
-
-                                // 📦 STRICT PAYLOAD (Senior Dev Spec)
-                                // Note: pix_created is NOT handled here anymore, as per architecture rules.
-                                const payload = {
-                                    event: eventName,
-                                    platform: 'Custom',
-                                    orderId: conversionData.transaction_id,
-                                    paymentMethod: 'pix',
-                                    status: orderStatus,
-                                    totalPriceInCents: valueInCents,
-                                    customer: {
-                                        email: conversionData.email,
-                                        ip: conversionData.client_ip || null
-                                    },
-                                    trackingParameters: {
-                                        utm_source: conversionData.utm_source || null,
-                                        utm_campaign: conversionData.utm_campaign || null,
-                                        utm_medium: conversionData.utm_medium || null,
-                                        utm_content: conversionData.utm_content || null,
-                                        utm_term: conversionData.utm_term || null
-                                    }
-                                }
-
-                                // 🚀 SEND REQUEST
-                                const response = await fetch(endpoint, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': `Bearer ${config.api_key}` // ⚠️ CHANGED TO BEARER
-                                    },
-                                    body: JSON.stringify(payload)
-                                })
-
-                                const respJson = await response.json().catch(() => ({}))
-                                const success = response.ok
-
-                                // D. LOG RESULT
-                                await supabase.from('integration_logs').insert({
-                                    transaction_id: txId,
-                                    integration_name: integration.name,
-                                    event_name: eventName,
-                                    status: success ? 'success' : 'failed',
-                                    payload: payload,
-                                    response: respJson
-                                })
-                            }
-                            // Add other integrations here
-                        }
+                        if (process.env.UTMIFY_API_KEY && integration.name === 'utmify') continue // Skip if handled by ENV
+                        // ... Implementation for others if needed ...
                     }
                 }
             } catch (integrationError) {
