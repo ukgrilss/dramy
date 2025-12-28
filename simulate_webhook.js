@@ -1,5 +1,6 @@
 
-const fetch = require('node-fetch') // Might not work if ESM, using dynamic import if needed or simple http
+// using native fetch
+
 
 // If node-fetch is not available, we can use built-in fetch in newer Node
 // Using standard fetch
