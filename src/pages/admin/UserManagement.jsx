@@ -19,13 +19,26 @@ export default function UserManagement() {
     const [reprocessId, setReprocessId] = useState('')
     const [reprocessing, setReprocessing] = useState(false)
 
-    const handleAutoReprocess = async (email) => {
-        if (!email) return alert('Usuário sem email.')
-        if (!confirm(`Tentar reprocessar automaticamente o último pagamento de ${email}?`)) return
+    const handleAutoReprocess = async (email, e) => {
+        // 1. Force Stop Propagation directly
+        if (e) {
+            e.preventDefault()
+            e.stopPropagation()
+        }
+
+        // 2. Immediate Visual Feedback (Native Alert)
+        // This PROVES the button was clicked.
+        if (!confirm(`Deseja verificar e reprocessar o pagamento de ${email}?`)) {
+            return
+        }
+
+        if (!email) return alert('ERRO: Usuário sem email.')
 
         setReprocessing(true)
         try {
-            // 1. Buscar última transação deste email
+            // 3. Native loading state is just the button spinner
+            // alert('Buscando transação... aguarde.') 
+
             const { data: intent, error: intentError } = await supabase
                 .from('payment_intents')
                 .select('transaction_id')
@@ -35,26 +48,32 @@ export default function UserManagement() {
                 .single()
 
             if (intentError || !intent) {
-                alert('❌ Nenhuma transação encontrada no sistema para este email.')
+                console.error('Intent not found:', intentError)
+                alert('❌ Nenhuma transação encontrada para este email.')
                 return
             }
 
-            // 2. Reprocessar
-            const { data, error } = await supabase.rpc('reprocess_payment_intent', {
-                p_transaction_id: intent.transaction_id
+            // 4. Reprocessar
+            const { data, error } = await supabase.rpc('reprocess_latest_payment_by_email', {
+                p_email: email
             })
 
-            if (error) throw error
-
-            if (data.success) {
-                alert('✅ Sucesso: ' + data.message)
-                fetchUsers()
-            } else {
-                alert('❌ Erro: ' + (data.error || 'Erro desconhecido'))
+            if (error) {
+                if (error.message?.includes('function') && error.message?.includes('not found')) {
+                    alert('⚠️ ATENÇÃO: Você precisa rodar o script SQL "CREATE_AUTO_REPROCESS_RPC.sql" no Supabase!')
+                    return
+                }
+                throw error
             }
+
+            if (!data.success) throw new Error(data.message || 'Falha ao reprocessar')
+
+            alert('✅ Sucesso: ' + data.message)
+            fetchUsers()
+
         } catch (error) {
             console.error('Error auto-processing:', error)
-            alert('Erro: ' + error.message)
+            alert('❌ Erro: ' + error.message)
         } finally {
             setReprocessing(false)
         }
