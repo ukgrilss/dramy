@@ -84,21 +84,43 @@ async function handleTrackEvent(req, res) {
 
                 // Send to UTMify
                 if (integration.name === 'utmify') {
+                    const config = integration.config
+                    const endpoint = config.endpoint || process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api/orders'
+
+                    const valueInCents = Math.round((payload?.value || 0) * 100)
+
+                    let orderStatus = 'waiting_payment'
+                    if (event === 'purchase' || event === 'subscription_active') orderStatus = 'paid'
+
+                    // 📦 STRICT MINIMAL PAYLOAD (Senior Dev Spec)
                     const trackPayload = {
                         event: event,
-                        transaction_id: transactionId,
-                        user_id: userId,
-                        value: payload?.value || 0,
-                        currency: 'BRL',
-                        email: payload?.email,
-                        ...payload // Merge UTMs
+                        platform: 'Custom',
+                        orderId: transactionId,
+                        paymentMethod: 'pix',
+                        status: orderStatus,
+                        totalPriceInCents: valueInCents,
+                        customer: {
+                            email: payload?.email || 'email@naoinformado.com',
+                            ip: payload?.client_ip || null
+                        },
+                        trackingParameters: {
+                            utm_source: payload?.utm_source || null,
+                            utm_campaign: payload?.utm_campaign || null,
+                            utm_medium: payload?.utm_medium || null,
+                            utm_content: payload?.utm_content || null,
+                            utm_term: payload?.utm_term || null
+                        }
                     }
 
                     console.log(`[Local API] Sending to UTMify:`, trackPayload)
 
-                    const response = await fetch('https://api.utmify.com.br/v1/conversions', {
+                    const response = await fetch(endpoint, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'x-api-key': integration.config.api_key },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${config.api_key}`
+                        },
                         body: JSON.stringify(trackPayload)
                     })
 
