@@ -98,7 +98,7 @@ export default async function handler(req, res) {
                     const nowIso = new Date().toISOString()
 
                     // Determine Status based on event
-                    let orderStatus = 'pending'
+                    let orderStatus = 'waiting_payment' // Reverted to valid status
                     if (event === 'purchase' || event === 'subscription_active') orderStatus = 'paid'
 
                     // 🛡️ Robust Customer Data Construction
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
                     const customerDoc = payload?.document || userProfile.cpf || null
 
                     const trackPayload = {
-                        platform: 'PushinPay',
+                        platform: 'Custom', // Changed to Custom to ensure visibility
                         orderId: transactionId,
                         paymentMethod: 'pix',
                         status: orderStatus,

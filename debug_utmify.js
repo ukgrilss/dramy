@@ -67,21 +67,18 @@ async function main() {
     })
 
     // 2. Logs
-    const { data: logs, error: logError } = await supabase
+    const { data: logs } = await supabase
         .from('integration_logs')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(3)
+        .limit(1)
 
-    if (logError) console.error("Error fetching logs:", logError)
-
-    console.log(`\n[Logs] Last 10 records:`)
     logs?.forEach(l => {
         console.log(`Time: ${l.created_at}`)
         console.log(`Event: ${l.event_name}`)
         console.log(`Status: ${l.status}`)
         console.log(`Payload:`, JSON.stringify(l.payload, null, 2))
-        console.log(`Resp:`, JSON.stringify(l.response || {}).substring(0, 500))
+        console.log(`Resp:`, JSON.stringify(l.response || {})) // Show full response
         console.log("----------------")
     })
 }

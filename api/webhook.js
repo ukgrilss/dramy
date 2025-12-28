@@ -174,11 +174,11 @@ export default async function handler(req, res) {
                                 const nowIso = new Date().toISOString()
 
                                 let orderStatus = 'paid' // Webhooks are usually for paid/approved
-                                if (eventName === 'pix_created') orderStatus = 'pending'
+                                if (eventName === 'pix_created') orderStatus = 'waiting_payment'
 
                                 // Construct Payload
                                 const payload = {
-                                    platform: 'PushinPay',
+                                    platform: 'Custom',
                                     orderId: conversionData.transaction_id,
                                     paymentMethod: 'pix',
                                     status: orderStatus,
