@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import DataTable from '@/components/admin/DataTable'
 import { User, Mail, Calendar, CreditCard, Shield, MoreVertical, CheckCircle, XCircle, Search, RefreshCw, Loader2, PlayCircle, AlertCircle, X } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function UserManagement() {
     const [selectedUser, setSelectedUser] = useState(null)
@@ -308,7 +309,7 @@ export default function UserManagement() {
                         className="p-1.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors"
                         title="Reprocessar Último Pagamento (Automático)"
                     >
-                        {reprocessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                        <RefreshCw className="w-4 h-4" />
                     </button>
                     <button
                         onClick={() => handleManage(row)}
