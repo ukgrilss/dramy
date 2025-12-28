@@ -24,9 +24,6 @@ export default async function handler(req, res) {
 
             if (!intent) {
                 console.error('[WebHook] Intent not found for:', txId)
-                // Fallback or Error? User script implies RE-SENDING same order. 
-                // If we don't have intent, we might lack UTMs. But user demands "Strict Payload".
-                // We will try to proceed with metadata if available or defaults.
             }
 
             const userEmail = intent?.email || paymentData.metadata?.email
@@ -43,12 +40,13 @@ export default async function handler(req, res) {
 
             // 3. PROCESS INTEGRATIONS (UTMify)
             if (process.env.UTMIFY_API_KEY) {
-                // Determine Creation Date
-                // CRITICAL: Must match the original PIX generation date if possible.
-                // STRATEGY: Lookup original 'waiting_payment' log in integration_logs (Strict Contract)
-                let createdAt = null
-                let overrideProducts = null
-                let overrideCommission = null
+                // Approval Date is Now
+                const now = new Date()
+                const approvedDate = formatStatsDate(now)
+
+                // STRATEGY: STRICT LOG REPLAY
+                // 1. Try to find original payload
+                let replayPayload = null
 
                 try {
                     const { data: originalLog } = await supabase
@@ -56,73 +54,71 @@ export default async function handler(req, res) {
                         .select('payload')
                         .eq('transaction_id', txId)
                         .eq('integration_name', 'utmify_env')
-                        .neq('event_name', 'purchase') // Avoid self-match if re-running
-                        .order('created_at', { ascending: true }) // Get the first one (creation)
+                        .neq('event_name', 'purchase')
+                        .order('created_at', { ascending: true })
                         .limit(1)
                         .single()
 
                     if (originalLog && originalLog.payload) {
-                        const p = originalLog.payload
-                        if (p.createdAt) {
-                            console.log('[Webhook] Found original createdAt:', p.createdAt)
-                            createdAt = p.createdAt
-                        }
-                        // STRICT REUSE: Copy Products & Commission
-                        if (p.products) overrideProducts = p.products
-                        if (p.commission) overrideCommission = p.commission
+                        console.log('[Webhook] Found original payload for Replay')
+                        // CLONE
+                        replayPayload = JSON.parse(JSON.stringify(originalLog.payload))
+
+                        // UPDATE ONLY STATUS & DATE
+                        replayPayload.status = 'paid'
+                        replayPayload.approvedDate = approvedDate
                     }
                 } catch (lookupErr) {
-                    console.warn('[Webhook] Failed to lookup original log:', lookupErr.message)
+                    console.warn('[Webhook] Failed to lookup/replay original log:', lookupErr.message)
                 }
 
-                // Fallback if not found (e.g. first event failed or direct payment)
-                if (!createdAt) {
+                let result
+
+                if (replayPayload) {
+                    // PATH A: Strict Replay (Preferred)
+                    // The payload is already perfect (same products, same commission, same everything).
+                    // Just updated status.
+                    result = await sendUtmifyOrder({
+                        eventName: 'webhook_paid_replay',
+                        rawPayload: replayPayload
+                    })
+                } else {
+                    // PATH B: Fallback Construction (If log missing)
+                    // Must reconstruct manually as per original logic, but we prefer Replay.
+
+                    const valueInCents = Math.round((paymentData.amount || (intent?.amount || 0) * 100))
+                    const userIp = intent?.ip_address || '127.0.0.1'
+                    // Fallback createdAt determination
                     const createdDateObj = intent?.created_at ? new Date(intent.created_at) : new Date()
-                    createdAt = formatStatsDate(createdDateObj)
+                    const fallbackCreatedAt = formatStatsDate(createdDateObj)
+
+                    const customer = {
+                        name: 'Cliente',
+                        email: userEmail,
+                        phone: intent?.phone || null,
+                        document: null,
+                        ip: userIp
+                    }
+
+                    const utm = {
+                        utm_source: intent?.utm_source,
+                        utm_campaign: intent?.utm_campaign,
+                        utm_medium: intent?.utm_medium,
+                        utm_content: intent?.utm_content,
+                        utm_term: intent?.utm_term
+                    }
+
+                    result = await sendUtmifyOrder({
+                        orderId: txId,
+                        status: 'paid',
+                        valueInCents: valueInCents,
+                        createdAt: fallbackCreatedAt,
+                        approvedDate: approvedDate,
+                        customer,
+                        utm,
+                        eventName: 'webhook_paid_fallback'
+                    })
                 }
-
-                // Approval Date is Now
-                const now = new Date()
-                const approvedDate = formatStatsDate(now)
-
-                const valueInCents = Math.round((paymentData.amount || (intent?.amount || 0) * 100))
-
-                // IP Handling
-                // Webhook is server-to-server, so req.ip is the gateway's IP. 
-                // We want the USER'S IP. Prioritize intent data.
-                const userIp = intent?.ip_address || '127.0.0.1'
-
-                // Prepare Customer
-                const customer = {
-                    name: 'Cliente', // Webhook usually lacks name
-                    email: userEmail,
-                    phone: intent?.phone || null,
-                    document: null,
-                    ip: userIp
-                }
-
-                // Prepare UTMs (From Intent)
-                const utm = {
-                    utm_source: intent?.utm_source,
-                    utm_campaign: intent?.utm_campaign,
-                    utm_medium: intent?.utm_medium,
-                    utm_content: intent?.utm_content,
-                    utm_term: intent?.utm_term
-                }
-
-                // Call Service
-                const result = await sendUtmifyOrder({
-                    orderId: txId, // MUST match original
-                    status: 'paid',
-                    valueInCents: valueInCents,
-                    createdAt: createdAt, // Consistency Check
-                    approvedDate: approvedDate,
-                    customer,
-                    utm,
-                    eventName: 'webhook_paid',
-                    overrideProducts, // STRICT REUSE
-                    overrideCommission // STRICT REUSE
-                })
 
                 // Log Result
                 await supabase.from('integration_logs').insert({
