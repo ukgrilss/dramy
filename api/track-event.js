@@ -121,17 +121,27 @@ export default async function handler(req, res) {
 
                 // Log Result
                 // STRICT PERSISTENCE: If sending 'waiting_payment', FORCE log event_name to 'pix_pending'
-                // This ensures the Webhook can find it later using the strict query.
                 const logEventName = utmifyStatus === 'waiting_payment' ? 'pix_pending' : event
 
-                await supabase.from('integration_logs').insert({
+                const logEntry = {
                     transaction_id: uniqueKey,
-                    integration_name: 'utmify_env', // Explicitly logging as env mode
-                    event_name: logEventName, // ⚓ ANCHOR: stored as 'pix_pending'
+                    integration_name: 'utmify_env',
+                    event_name: logEventName, // ⚓ ANCHOR
                     status: result.success ? 'success' : 'failed',
                     payload: result.payload,
-                    response: result.response || { error: result.error }
-                })
+                    response: result.response || { error: result.error },
+                    created_at: new Date() // Explicit Timestamp as requested
+                }
+
+                // INSERIR IMEDIATAMENTE (e verificar erro)
+                const { error: insertError } = await supabase.from('integration_logs').insert(logEntry)
+
+                if (insertError) {
+                    console.error('[TrackEvent] CRITICAL: Failed to save integration log!', insertError)
+                    // If this fails, the Webhook will NOT be able to work.
+                } else {
+                    console.log(`[TrackEvent] Log saved: ${logEventName} (${result.success ? 'success' : 'failed'})`)
+                }
 
                 results.push({ name: 'utmify', status: result.success ? 'sent' : 'failed' })
 
