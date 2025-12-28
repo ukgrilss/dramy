@@ -76,7 +76,8 @@ export async function sendUtmifyOrder({
             planId: 'monthly',
             planName: 'Mensal',
             quantity: 1,
-            priceInCents: valueInCents > 0 ? valueInCents : 1 // Never 0
+            quantity: 1,
+            priceInCents: valueInCents // ZERO TOLERANCE: If 0, validation will block.
         }]
 
         // 2. Prepare Commission (Mandatory)
