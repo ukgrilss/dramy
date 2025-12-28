@@ -100,9 +100,22 @@ export default async function handler(req, res) {
 
                     const valueInCents = Math.round((payload?.value || 0) * 100)
 
-                    // Determine Status based on event
-                    let orderStatus = 'waiting_payment'
-                    if (event === 'purchase' || event === 'subscription_active') orderStatus = 'paid'
+                    // ⚙️ SPECS: Configurable Endpoint (Default to documented standard if missing)
+                    const endpoint = config.endpoint || process.env.UTMIFY_ENDPOINT || 'https://api.utmify.com.br/api/orders'
+
+                    const valueInCents = Math.round((payload?.value || 0) * 100)
+
+                    // 🚨 STRICT MAPPING (Ref: Senior Dev Spec)
+                    // Internal Events -> UTMify Status
+                    // 'pix_created' -> 'waiting_payment'
+                    // 'pix_pending' -> 'waiting_payment'
+                    // 'purchase'    -> 'paid'
+                    let utmifyEvent = 'purchase' // ALWAYS 'purchase'
+                    let utmifyStatus = 'waiting_payment'
+
+                    if (event === 'purchase' || event === 'subscription_active') {
+                        utmifyStatus = 'paid'
+                    }
 
                     // 🛡️ User Data
                     // Minimal: Only email is strictly required per user spec (removed phone/doc)
@@ -118,13 +131,13 @@ export default async function handler(req, res) {
                         utm_term: payload?.utm_term || userProfile.utm_term || null
                     }
 
-                    // 📦 STRICT MINIMAL PAYLOAD (Senior Dev Spec)
+                    // 📦 STRICT EXTREME PAYLOAD (Senior Dev Spec)
                     const trackPayload = {
-                        event: event,
+                        event: utmifyEvent, // ALWAYS 'purchase'
                         platform: 'Custom',
                         orderId: transactionId,
                         paymentMethod: 'pix',
-                        status: orderStatus,
+                        status: utmifyStatus,
                         totalPriceInCents: valueInCents,
                         customer: {
                             email: customerEmail,
