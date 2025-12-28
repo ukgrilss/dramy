@@ -47,6 +47,8 @@ export default async function handler(req, res) {
                 // CRITICAL: Must match the original PIX generation date if possible.
                 // STRATEGY: Lookup original 'waiting_payment' log in integration_logs (Strict Contract)
                 let createdAt = null
+                let overrideProducts = null
+                let overrideCommission = null
 
                 try {
                     const { data: originalLog } = await supabase
@@ -59,9 +61,15 @@ export default async function handler(req, res) {
                         .limit(1)
                         .single()
 
-                    if (originalLog && originalLog.payload && originalLog.payload.createdAt) {
-                        console.log('[Webhook] Found original createdAt:', originalLog.payload.createdAt)
-                        createdAt = originalLog.payload.createdAt
+                    if (originalLog && originalLog.payload) {
+                        const p = originalLog.payload
+                        if (p.createdAt) {
+                            console.log('[Webhook] Found original createdAt:', p.createdAt)
+                            createdAt = p.createdAt
+                        }
+                        // STRICT REUSE: Copy Products & Commission
+                        if (p.products) overrideProducts = p.products
+                        if (p.commission) overrideCommission = p.commission
                     }
                 } catch (lookupErr) {
                     console.warn('[Webhook] Failed to lookup original log:', lookupErr.message)
@@ -111,7 +119,9 @@ export default async function handler(req, res) {
                     approvedDate: approvedDate,
                     customer,
                     utm,
-                    eventName: 'webhook_paid'
+                    eventName: 'webhook_paid',
+                    overrideProducts, // STRICT REUSE
+                    overrideCommission // STRICT REUSE
                 })
 
                 // Log Result

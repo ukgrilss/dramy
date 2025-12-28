@@ -46,7 +46,10 @@ export async function sendUtmifyOrder({
     approvedDate,
     customer,
     utm,
-    eventName
+    eventName,
+    // Overrides (for strict reuse)
+    overrideProducts,
+    overrideCommission
 }) {
     if (!process.env.UTMIFY_API_KEY) {
         console.warn('[UTMify] Skipped: Missing UTMIFY_API_KEY env var.')
@@ -59,7 +62,8 @@ export async function sendUtmifyOrder({
     // Products CANNOT be empty. Commission CANNOT be zero (if possible).
 
     // 1. Prepare Products Array (Mandatory)
-    const products = [{
+    // If override provided (from previous state), use it. Else generate default.
+    const products = overrideProducts || [{
         id: 'main-subscription',
         name: 'Assinatura Premium', // Generic name acceptable? User said "NomeDoSaaS" in platform
         planId: 'monthly',
@@ -69,7 +73,8 @@ export async function sendUtmifyOrder({
     }]
 
     // 2. Prepare Commission (Mandatory)
-    const commission = {
+    // If override provided, use it. Else generate.
+    const commission = overrideCommission || {
         totalPriceInCents: valueInCents,
         gatewayFeeInCents: 0, // Unknown, safe to 0
         userCommissionInCents: valueInCents // Cannot be 0 per specs if user received something.
