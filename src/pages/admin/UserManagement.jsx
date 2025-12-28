@@ -18,6 +18,48 @@ export default function UserManagement() {
     const [reprocessId, setReprocessId] = useState('')
     const [reprocessing, setReprocessing] = useState(false)
 
+    const handleAutoReprocess = async (email) => {
+        if (!email) return alert('Usuário sem email.')
+        if (!confirm(`Tentar reprocessar automaticamente o último pagamento de ${email}?`)) return
+
+        setReprocessing(true)
+        try {
+            // 1. Buscar última transação deste email
+            const { data: intent, error: intentError } = await supabase
+                .from('payment_intents')
+                .select('transaction_id')
+                .eq('email', email)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single()
+
+            if (intentError || !intent) {
+                alert('❌ Nenhuma transação encontrada no sistema para este email.')
+                return
+            }
+
+            // 2. Reprocessar
+            const { data, error } = await supabase.rpc('reprocess_payment_intent', {
+                p_transaction_id: intent.transaction_id
+            })
+
+            if (error) throw error
+
+            if (data.success) {
+                alert('✅ Sucesso: ' + data.message)
+                fetchUsers()
+            } else {
+                alert('❌ Erro: ' + (data.error || 'Erro desconhecido'))
+            }
+        } catch (error) {
+            console.error('Error auto-processing:', error)
+            alert('Erro: ' + error.message)
+        } finally {
+            setReprocessing(false)
+        }
+    }
+
+    // Mantendo o manual caso precise
     const handleReprocess = async () => {
         if (!reprocessId.trim()) return alert('Digite o ID da transação')
 
@@ -33,7 +75,7 @@ export default function UserManagement() {
                 alert('✅ Sucesso: ' + data.message)
                 setShowReprocessModal(false)
                 setReprocessId('')
-                fetchUsers() // Refresh users list
+                fetchUsers()
             } else {
                 alert('❌ Erro: ' + (data.error || 'Erro desconhecido ao reprocessar'))
             }
@@ -262,14 +304,11 @@ export default function UserManagement() {
             render: (value, row) => (
                 <div className="flex items-center justify-end gap-2">
                     <button
-                        onClick={() => {
-                            setReprocessId('') // Clear previous
-                            setShowReprocessModal(true)
-                        }}
+                        onClick={() => handleAutoReprocess(row.email)}
                         className="p-1.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors"
-                        title="Reprocessar Pagamento Manualmente"
+                        title="Reprocessar Último Pagamento (Automático)"
                     >
-                        <RefreshCw className="w-4 h-4" />
+                        {reprocessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                     </button>
                     <button
                         onClick={() => handleManage(row)}
