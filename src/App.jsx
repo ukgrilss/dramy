@@ -80,7 +80,7 @@ function App() {
                     <Route path="analytics" element={<Analytics />} />
                     {/* Map "series" to ContentManagement for now, or rename ContentManagement */}
                     <Route path="series" element={<ContentManagement />} />
-                    <Route path="categories" element={<CategoryManagement />} />
+                    {/* <Route path="categories" element={<CategoryManagement />} /> */}
                     <Route path="users" element={<UserManagement />} />
                     <Route path="suggestions" element={<Suggestions />} />
                     {/* Map "plans" to SubscriptionManagement */}

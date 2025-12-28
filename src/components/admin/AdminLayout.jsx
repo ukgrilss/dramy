@@ -23,7 +23,7 @@ const AdminLayout = () => {
         { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
         { path: '/admin/series', icon: Film, label: 'Séries' },
-        { path: '/admin/categories', icon: List, label: 'Categorias' },
+        // { path: '/admin/categories', icon: List, label: 'Categorias' }, // REMOVED
         { path: '/admin/users', icon: Users, label: 'Usuários' },
         { path: '/admin/suggestions', icon: MessageSquare, label: 'Sugestões' },
         { path: '/admin/plans', icon: CreditCard, label: 'Config. Pagamento' },
