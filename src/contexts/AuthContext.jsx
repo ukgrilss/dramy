@@ -170,12 +170,35 @@ export const AuthProvider = ({ children }) => {
     }
 
     const refreshProfile = async () => {
-        if (user) {
-            const data = await fetchUserRole(user.id)
-            if (data) {
-                setProfile(data) // ⚡ CRITICAL: Update global state!
+        if (!user) return
+
+        try {
+            // ⚡ FORCE REFRESH: Bypass RPCs/Metadata and hit the table directly
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single()
+
+            if (!error && data) {
+                // Ensure field types are correct
+                if (data.subscription_active === true) {
+                    console.log("⚡ FORCE PROFILE UPDATE: ACTIVE")
+                }
+
+                // Force State Update
+                setProfile(prev => ({ ...prev, ...data }))
+
+                // Force Role Update
+                if (data.role) {
+                    setUserRole(data.role)
+                    localStorage.setItem('userRole', data.role)
+                }
+
+                return data
             }
-            return data
+        } catch (err) {
+            console.error("Force refresh failed:", err)
         }
     }
 

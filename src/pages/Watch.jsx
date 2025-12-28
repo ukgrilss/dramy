@@ -28,7 +28,7 @@ export default function Watch() {
 
     // 1. Fetch Content
     useEffect(() => {
-        if (!id || id === 'undefined' || !user) return
+        if (!id || id === 'undefined') return
 
         const fetchContent = async () => {
             try {
@@ -56,15 +56,17 @@ export default function Watch() {
                     })
 
                     // Fetch History for Series
-                    const { data: history } = await supabase
-                        .from('watch_history')
-                        .select('progress_seconds')
-                        .eq('user_id', user.id)
-                        .eq('series_id', seriesData.id)
-                        .maybeSingle()
+                    if (user) {
+                        const { data: history } = await supabase
+                            .from('watch_history')
+                            .select('progress_seconds')
+                            .eq('user_id', user.id)
+                            .eq('series_id', seriesData.id)
+                            .maybeSingle()
 
-                    if (history?.progress_seconds) {
-                        setInitialTime(history.progress_seconds)
+                        if (history?.progress_seconds) {
+                            setInitialTime(history.progress_seconds)
+                        }
                     }
 
                 } else {
@@ -79,15 +81,17 @@ export default function Watch() {
                         setMovie(movieData)
 
                         // Fetch History for Movie
-                        const { data: history } = await supabase
-                            .from('watch_history')
-                            .select('progress_seconds')
-                            .eq('user_id', user.id)
-                            .eq('movie_id', movieData.id)
-                            .maybeSingle()
+                        if (user) {
+                            const { data: history } = await supabase
+                                .from('watch_history')
+                                .select('progress_seconds')
+                                .eq('user_id', user.id)
+                                .eq('movie_id', movieData.id)
+                                .maybeSingle()
 
-                        if (history?.progress_seconds) {
-                            setInitialTime(history.progress_seconds)
+                            if (history?.progress_seconds) {
+                                setInitialTime(history.progress_seconds)
+                            }
                         }
                     }
                 }
