@@ -39,7 +39,7 @@ async function checkDates() {
         return
     }
 
-    console.table(data)
+    console.log(JSON.stringify(data, null, 2))
 }
 
 checkDates()
