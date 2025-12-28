@@ -54,7 +54,9 @@ export default async function handler(req, res) {
                         .select('payload')
                         .eq('transaction_id', txId)
                         .eq('integration_name', 'utmify_env')
-                        .neq('event_name', 'purchase')
+                        // STRICT RULE: Only Replay 'pix_pending' that was SUCCESSFUL
+                        .eq('event_name', 'pix_pending')
+                        .eq('status', 'success')
                         .order('created_at', { ascending: true })
                         .limit(1)
                         .single()
@@ -87,7 +89,7 @@ export default async function handler(req, res) {
                     // We cannot reconstruct financial data safely without the original log.
                     // Sending fake data (0 commission) breaks the integration logic.
                     // Better to fail and debug than to send garbage.
-                    console.error(`[Webhook] CRITICAL: Strict Replay Failed for ${txId}. Original 'waiting_payment' log not found.`)
+                    console.error(`[Webhook] CRITICAL: Strict Replay Failed for ${txId}. Original 'pix_pending' log not found/failed.`)
                     // We define result as error to log it in integration_logs
                     result = {
                         success: false,
