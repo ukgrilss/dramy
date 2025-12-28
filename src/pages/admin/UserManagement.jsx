@@ -19,6 +19,9 @@ export default function UserManagement() {
     const [reprocessId, setReprocessId] = useState('')
     const [reprocessing, setReprocessing] = useState(false)
 
+    // Success State
+    const [successData, setSuccessData] = useState(null)
+
     const handleAutoReprocess = async (email, e) => {
         // Simple stop propagation is enough
         if (e && e.stopPropagation) {
@@ -47,7 +50,7 @@ export default function UserManagement() {
 
             if (intentError || !intent) {
                 console.error('Intent not found:', intentError)
-                alert('❌ Nenhuma transação encontrada para este email.')
+                alert('❌ Nenhuma transação encontrada.')
                 return
             }
 
@@ -64,9 +67,15 @@ export default function UserManagement() {
                 throw error
             }
 
-            if (!data.success) throw new Error(data.message || 'Falha ao reprocessar')
+            if (!data.success) throw new Error(data.message)
 
-            alert('✅ Sucesso: ' + data.message)
+            // SHOW SUCCESS MODAL INSTEAD OF ALERT
+            setSuccessData({
+                email: email,
+                message: data.message,
+                plan_name: 'Plano (Ativado)'
+            })
+
             fetchUsers()
 
         } catch (error) {
@@ -323,21 +332,7 @@ export default function UserManagement() {
                 <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
                     <button
                         type="button"
-                        onClickCapture={(e) => {
-                            // CAPTURE PHASE: Fires before bubbling to row
-                            e.stopPropagation()
-                            e.preventDefault()
-                            handleAutoReprocess(row.email, e)
-                        }}
-                        disabled={reprocessing}
-                        className="px-3 py-1.5 text-xs font-bold bg-white text-black hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 relative z-50 cursor-pointer shadow-lg border border-white"
-                        title="Reprocessar Último Pagamento (Automático)"
-                    >
-                        {reprocessing ? 'Processando...' : 'REPROCESSAR (TESTE)'}
-                    </button>
-                    <button
-                        type="button"
-                        onClickCapture={(e) => {
+                        onClick={(e) => {
                             e.stopPropagation()
                             handleManage(row)
                         }}
@@ -432,6 +427,15 @@ export default function UserManagement() {
                             >
                                 <CreditCard className="w-4 h-4" />
                                 Conceder 30 Dias (Ação Rápida)
+                            </button>
+
+                            <button
+                                onClick={(e) => handleAutoReprocess(selectedUser.email, e)}
+                                disabled={reprocessing}
+                                className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${reprocessing ? 'animate-spin' : ''}`} />
+                                {reprocessing ? 'Buscando falhas...' : 'Verificar & Reprocessar Pagamento'}
                             </button>
 
                             <hr className="border-white/10 my-2" />

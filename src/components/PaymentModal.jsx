@@ -59,6 +59,28 @@ export default function PaymentModal({ plan, onClose }) {
         }
     }, [user, step])
 
+    // =========================================================
+    // ⚡ FALLBACK POLLING (DOUBLE CHECK EVERY 2s) ⚡
+    // =========================================================
+    useEffect(() => {
+        if (!user || step === 'success') return
+
+        const interval = setInterval(async () => {
+            const { data } = await supabase
+                .from('profiles')
+                .select('subscription_active')
+                .eq('id', user.id)
+                .single()
+
+            if (data?.subscription_active === true) {
+                setActivating(false)
+                setStep('success')
+            }
+        }, 2000)
+
+        return () => clearInterval(interval)
+    }, [user, step])
+
 
     const generateQRCode = async (text) => {
         try {
@@ -127,14 +149,31 @@ export default function PaymentModal({ plan, onClose }) {
 
     const [paymentError, setPaymentError] = useState(null)
 
-    const handleConfirmPayment = () => {
+    const handleConfirmPayment = async () => {
         setActivating(true)
         setPaymentError(null)
 
-        // Simula verificação
+        try {
+            // ⚡ Double check in database directly
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('subscription_active')
+                .eq('id', user.id)
+                .single()
+
+            if (profile?.subscription_active === true) {
+                setActivating(false)
+                setStep('success')
+                return
+            }
+        } catch (err) {
+            console.error('Error checking status:', err)
+        }
+
+        // Still not active? Show message
         setTimeout(() => {
             setActivating(false)
-            setPaymentError('Pagamento não identificado. O sistema verifica automaticamente, aguarde alguns instantes.')
+            setPaymentError('Pagamento ainda em processamento. Aguarde alguns segundos e tente novamente.')
         }, 2000)
     }
 
