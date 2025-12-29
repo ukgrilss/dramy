@@ -22,7 +22,9 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing required fields' })
         }
 
-        // 🔐 TRANSACTION ID — GATEWAY FIRST (REGRA ABSOLUTA)
+        /* ======================================================
+           🔐 TRANSACTION ID — GATEWAY FIRST (REGRA ABSOLUTA)
+        ====================================================== */
         const gatewayId =
             payload?.gateway_transaction_id ||
             payload?.payment_id ||
@@ -30,7 +32,9 @@ export default async function handler(req, res) {
 
         const uniqueKey = gatewayId || transactionId || `lead_${userId}`
 
-        // 🔒 TRAVA ABSOLUTA — 1 PIX = 1 pix_pending
+        /* ======================================================
+           🔒 DEDUPLICAÇÃO ABSOLUTA — 1 PIX = 1 pix_pending
+        ====================================================== */
         const { data: existingPix } = await supabase
             .from('integration_logs')
             .select('id')
@@ -42,16 +46,33 @@ export default async function handler(req, res) {
             .single()
 
         if (existingPix) {
-            console.log(
-                `[TrackEvent] BLOCKED: pix_pending already exists for ${uniqueKey}`
-            )
+            console.log(`[TrackEvent] BLOCKED: pix_pending already exists for ${uniqueKey}`)
             return res.status(200).json({
                 success: true,
                 status: 'pix_pending_already_exists'
             })
         }
 
-        // ================= UTMify =================
+        /* ======================================================
+           💰 FONTE ÚNICA DE VERDADE DO PREÇO (BANCO)
+        ====================================================== */
+        const planSlug = payload?.plan_slug || 'monthly'
+
+        const { data: plan } = await supabase
+            .from('plans') // ⚠️ ajuste se sua tabela tiver outro nome
+            .select('price_cents')
+            .eq('slug', planSlug)
+            .single()
+
+        if (!plan || plan.price_cents <= 0) {
+            throw new Error(`CRITICAL: Plano inválido ou sem preço (${planSlug})`)
+        }
+
+        const valueInCents = plan.price_cents
+
+        /* ======================================================
+           📦 UTMify
+        ====================================================== */
         if (process.env.UTMIFY_API_KEY) {
             const now = new Date()
             const createdAt = formatStatsDate(now)
@@ -62,7 +83,7 @@ export default async function handler(req, res) {
                 '127.0.0.1'
 
             const customer = {
-                name: payload?.name,
+                name: payload?.name || 'Cliente',
                 email: payload?.email,
                 phone: payload?.phone,
                 document: payload?.document,
@@ -76,8 +97,6 @@ export default async function handler(req, res) {
                 utm_content: payload?.utm_content,
                 utm_term: payload?.utm_term
             }
-
-            const valueInCents = Math.round((payload?.value || 0) * 100)
 
             const result = await sendUtmifyOrder({
                 orderId: uniqueKey,
@@ -104,6 +123,7 @@ export default async function handler(req, res) {
         }
 
         return res.status(200).json({ success: true })
+
     } catch (err) {
         console.error('Track API Error:', err)
         return res.status(500).json({ error: err.message })
