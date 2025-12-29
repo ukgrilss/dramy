@@ -34,7 +34,6 @@ export default async function handler(req, res) {
 
         /* ======================================================
            🔒 DEDUPLICAÇÃO — SOMENTE PARA pix_pending
-           (NÃO bloqueia pix_created)
         ====================================================== */
         if (event === 'pix_pending' || event === 'waiting_payment') {
             const { data: existingPix } = await supabase
@@ -48,9 +47,6 @@ export default async function handler(req, res) {
                 .single()
 
             if (existingPix) {
-                console.log(
-                    `[TrackEvent] BLOCKED: pix_pending already exists for ${uniqueKey}`
-                )
                 return res.status(200).json({
                     success: true,
                     status: 'pix_pending_already_exists'
@@ -58,28 +54,27 @@ export default async function handler(req, res) {
             }
         }
 
-        // ===============================================
-        // ⚡ SPECIAL CASE: InitiateCheckout (S2S)
-        // ===============================================
+        /* ======================================================
+           ⚡ INITIATE CHECKOUT — S2S (UTMify)
+        ====================================================== */
         if (event === 'initiate_checkout') {
             if (process.env.UTMIFY_API_KEY) {
-                const now = new Date()
-                const createdAt = formatStatsDate(now)
-
-                // Construct fake but valid payload for IC
-                // IC has no value yet, pass 0. Service validation is relaxed for this status.
-                const val = 0
+                const createdAt = formatStatsDate(new Date())
 
                 await sendUtmifyOrder({
-                    orderId: `ic_${userId}_${Date.now()}`, // Temporary ID
+                    orderId: `ic_${userId}_${Date.now()}`,
                     status: 'initiate_checkout',
-                    valueInCents: val,
+                    valueInCents: 0,
                     createdAt,
                     approvedDate: null,
                     customer: {
                         name: payload?.name,
                         email: payload?.email,
-                        ip: payload?.client_ip || req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress || '127.0.0.1'
+                        ip:
+                            payload?.client_ip ||
+                            req.headers['x-forwarded-for']?.split(',')[0] ||
+                            req.socket?.remoteAddress ||
+                            '127.0.0.1'
                     },
                     utm: {
                         utm_source: payload?.utm_source,
@@ -90,53 +85,60 @@ export default async function handler(req, res) {
                     },
                     eventName: 'initiate_checkout'
                 })
-                console.log('[TrackEvent] InitiateCheckout S2S Sent')
             }
+
             return res.status(200).json({ success: true })
         }
 
         /* ======================================================
-           💰 PREÇO — FONTE ÚNICA (plans.price em REAIS)
+           💰 VALOR — PRIORIDADE ABSOLUTA DO PIX
         ====================================================== */
-        let planSlug =
-            payload?.plan_slug ||
-            payload?.plan ||
-            payload?.metadata?.plan_slug
+        let valueInCents = null
 
-        // fallback: buscar do payment_intents
-        if (!planSlug && uniqueKey) {
-            const { data: intent } = await supabase
-                .from('payment_intents')
-                .select('plan_slug')
-                .eq('transaction_id', uniqueKey)
+        // 1️⃣ PRIORIDADE: valor REAL do PIX
+        if (payload?.value && Number(payload.value) > 0) {
+            valueInCents = Math.round(Number(payload.value) * 100)
+        }
+
+        // 2️⃣ FALLBACK: valor do plano (somente se PIX não tiver valor)
+        if (!valueInCents) {
+            let planSlug =
+                payload?.plan_slug ||
+                payload?.plan ||
+                payload?.metadata?.plan_slug
+
+            if (!planSlug && uniqueKey) {
+                const { data: intent } = await supabase
+                    .from('payment_intents')
+                    .select('plan_slug')
+                    .eq('transaction_id', uniqueKey)
+                    .single()
+
+                planSlug = intent?.plan_slug
+            }
+
+            if (!planSlug) {
+                throw new Error('CRITICAL: plan_slug não encontrado')
+            }
+
+            const { data: plan } = await supabase
+                .from('plans')
+                .select('price')
+                .eq('slug', planSlug)
                 .single()
 
-            planSlug = intent?.plan_slug
+            if (!plan || !plan.price || Number(plan.price) <= 0) {
+                throw new Error(`CRITICAL: Plano inválido ou sem preço (${planSlug})`)
+            }
+
+            valueInCents = Math.round(Number(plan.price) * 100)
         }
-
-        if (!planSlug) {
-            throw new Error('CRITICAL: plan_slug não encontrado')
-        }
-
-        const { data: plan } = await supabase
-            .from('plans')
-            .select('price')
-            .eq('slug', planSlug)
-            .single()
-
-        if (!plan || !plan.price || Number(plan.price) <= 0) {
-            throw new Error(`CRITICAL: Plano inválido ou sem preço (${planSlug})`)
-        }
-
-        // reais -> centavos
-        const valueInCents = Math.round(Number(plan.price) * 100)
 
         /* ======================================================
            📦 UTMify
         ====================================================== */
         if (process.env.UTMIFY_API_KEY) {
-            const now = new Date()
-            const createdAt = formatStatsDate(now)
+            const createdAt = formatStatsDate(new Date())
 
             const safeIp =
                 req.headers['x-forwarded-for']?.split(',')[0] ||
@@ -159,7 +161,6 @@ export default async function handler(req, res) {
                 utm_term: payload?.utm_term
             }
 
-            // Mapeamento de status/evento
             const utmifyStatus =
                 event === 'purchase' || event === 'subscription_active'
                     ? 'paid'
@@ -188,8 +189,6 @@ export default async function handler(req, res) {
                 response: result.response || { error: result.error },
                 created_at: new Date()
             })
-
-            console.log(`[TrackEvent] ${logEventName} salvo com sucesso`)
         }
 
         return res.status(200).json({ success: true })
