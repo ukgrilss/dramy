@@ -56,22 +56,26 @@ export default async function handler(req, res) {
         /* ======================================================
            💰 FONTE ÚNICA DE VERDADE DO PREÇO (BANCO)
         ====================================================== */
-        const planSlug = payload?.plan_slug || 'monthly'
+        const planSlug = payload?.plan_slug
+
+        if (!planSlug) {
+            throw new Error('CRITICAL: plan_slug não enviado pelo frontend')
+        }
 
         const { data: plan } = await supabase
-            .from('plans') // ⚠️ ajuste se sua tabela tiver outro nome
+            .from('plans') // ajuste se sua tabela tiver outro nome
             .select('price_cents')
             .eq('slug', planSlug)
             .single()
 
-        if (!plan || plan.price_cents <= 0) {
+        if (!plan || !plan.price_cents || plan.price_cents <= 0) {
             throw new Error(`CRITICAL: Plano inválido ou sem preço (${planSlug})`)
         }
 
         const valueInCents = plan.price_cents
 
         /* ======================================================
-           📦 UTMify
+           📦 UTMify — PIX GERADO
         ====================================================== */
         if (process.env.UTMIFY_API_KEY) {
             const now = new Date()
@@ -85,17 +89,17 @@ export default async function handler(req, res) {
             const customer = {
                 name: payload?.name || 'Cliente',
                 email: payload?.email,
-                phone: payload?.phone,
-                document: payload?.document,
+                phone: payload?.phone || null,
+                document: payload?.document || null,
                 ip: payload?.client_ip || safeIp
             }
 
             const utm = {
-                utm_source: payload?.utm_source,
-                utm_campaign: payload?.utm_campaign,
-                utm_medium: payload?.utm_medium,
-                utm_content: payload?.utm_content,
-                utm_term: payload?.utm_term
+                utm_source: payload?.utm_source || null,
+                utm_campaign: payload?.utm_campaign || null,
+                utm_medium: payload?.utm_medium || null,
+                utm_content: payload?.utm_content || null,
+                utm_term: payload?.utm_term || null
             }
 
             const result = await sendUtmifyOrder({
