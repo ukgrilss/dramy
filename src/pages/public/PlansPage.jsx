@@ -11,21 +11,20 @@ export default function PlansPage() {
     const navigate = useNavigate()
 
     useEffect(() => {
-        // ⚡ UTMify Event: InitiateCheckout (Pixel)
-        // Polling para garantir que o script carregou (5 tentativas)
-        let attempts = 0
-        const interval = setInterval(() => {
-            if (window.utmify) {
-                window.utmify.track('InitiateCheckout')
-                clearInterval(interval)
-            } else {
-                attempts++
-                if (attempts >= 10) clearInterval(interval) // Desiste após 5s
-            }
-        }, 500)
-
-        return () => clearInterval(interval)
-    }, [])
+        // ⚡ UTMify Event: InitiateCheckout (S2S)
+        // Disparado no Backend para cumprir a regra "S2S Postback"
+        if (user) {
+            fetch('/api/track-event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    event: 'initiate_checkout',
+                    userId: user.id
+                    // Payload is handled server-side
+                })
+            }).catch(err => console.error('IC Tracking Error:', err))
+        }
+    }, [user])
 
     const plans = [
         {

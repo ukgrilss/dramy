@@ -121,27 +121,32 @@ export async function sendUtmifyOrder({
     }
 
     // 🛑 STRICT FINANCIAL VALIDATION CHECK 🛑
-    // UTMify ignores revenue if commission or price is 0.
-    // We MUST throw error before sending.
+    // Bypass validation for 'initiate_checkout' (no value yet)
+    if (status === 'initiate_checkout') {
+        // Log pass
+    } else {
+        // UTMify ignores revenue if commission or price is 0.
+        // We MUST throw error before sending.
 
-    // Check Products
-    if (!payload.products || payload.products.length === 0) {
-        throw new Error('Validation Failed: Products array is empty')
-    }
-    const invalidProduct = payload.products.find(p => !p.priceInCents || p.priceInCents <= 0)
-    if (invalidProduct) {
-        throw new Error(`Validation Failed: Product [${invalidProduct.id}] has invalid price: ${invalidProduct.priceInCents}`)
-    }
+        // Check Products
+        if (!payload.products || payload.products.length === 0) {
+            throw new Error('Validation Failed: Products array is empty')
+        }
+        const invalidProduct = payload.products.find(p => !p.priceInCents || p.priceInCents <= 0)
+        if (invalidProduct) {
+            throw new Error(`Validation Failed: Product [${invalidProduct.id}] has invalid price: ${invalidProduct.priceInCents}`)
+        }
 
-    // Check Commission
-    if (!payload.commission) {
-        throw new Error('Validation Failed: Commission object missing')
-    }
-    if (!payload.commission.totalPriceInCents || payload.commission.totalPriceInCents <= 0) {
-        throw new Error('Validation Failed: Commission TotalPrice is 0 or invalid')
-    }
-    if (!payload.commission.userCommissionInCents || payload.commission.userCommissionInCents <= 0) {
-        throw new Error('Validation Failed: Commission UserCommission is 0 or invalid')
+        // Check Commission
+        if (!payload.commission) {
+            throw new Error('Validation Failed: Commission object missing')
+        }
+        if (!payload.commission.totalPriceInCents || payload.commission.totalPriceInCents <= 0) {
+            throw new Error('Validation Failed: Commission TotalPrice is 0 or invalid')
+        }
+        if (!payload.commission.userCommissionInCents || payload.commission.userCommissionInCents <= 0) {
+            throw new Error('Validation Failed: Commission UserCommission is 0 or invalid')
+        }
     }
 
     // --- LOG BEFORE SEND ---

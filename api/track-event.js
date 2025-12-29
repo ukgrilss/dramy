@@ -48,12 +48,51 @@ export default async function handler(req, res) {
                 .single()
 
             if (existingPix) {
-                console.log(`[TrackEvent] SKIP: pix_pending já existe para ${uniqueKey}`)
+                console.log(
+                    `[TrackEvent] BLOCKED: pix_pending already exists for ${uniqueKey}`
+                )
                 return res.status(200).json({
                     success: true,
                     status: 'pix_pending_already_exists'
                 })
             }
+        }
+
+        // ===============================================
+        // ⚡ SPECIAL CASE: InitiateCheckout (S2S)
+        // ===============================================
+        if (event === 'initiate_checkout') {
+            if (process.env.UTMIFY_API_KEY) {
+                const now = new Date()
+                const createdAt = formatStatsDate(now)
+
+                // Construct fake but valid payload for IC
+                // IC has no value yet, pass 0. Service validation is relaxed for this status.
+                const val = 0
+
+                await sendUtmifyOrder({
+                    orderId: `ic_${userId}_${Date.now()}`, // Temporary ID
+                    status: 'initiate_checkout',
+                    valueInCents: val,
+                    createdAt,
+                    approvedDate: null,
+                    customer: {
+                        name: payload?.name,
+                        email: payload?.email,
+                        ip: payload?.client_ip || req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress || '127.0.0.1'
+                    },
+                    utm: {
+                        utm_source: payload?.utm_source,
+                        utm_campaign: payload?.utm_campaign,
+                        utm_medium: payload?.utm_medium,
+                        utm_content: payload?.utm_content,
+                        utm_term: payload?.utm_term
+                    },
+                    eventName: 'initiate_checkout'
+                })
+                console.log('[TrackEvent] InitiateCheckout S2S Sent')
+            }
+            return res.status(200).json({ success: true })
         }
 
         /* ======================================================
