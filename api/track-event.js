@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         const uniqueKey = gatewayId || transactionId || `lead_${userId}`
 
         /* ======================================================
-           🔒 DEDUPLICAÇÃO ABSOLUTA — 1 PIX = 1 pix_pending
+           🔒 DEDUPLICAÇÃO — 1 PIX = 1 pix_pending
         ====================================================== */
         const { data: existingPix } = await supabase
             .from('integration_logs')
@@ -54,16 +54,33 @@ export default async function handler(req, res) {
         }
 
         /* ======================================================
-           💰 FONTE ÚNICA DE VERDADE DO PREÇO (BANCO)
+           🧠 PLAN SLUG — OPÇÃO B (FALLBACK INTELIGENTE)
         ====================================================== */
-        const planSlug = payload?.plan_slug
+        let planSlug =
+            payload?.plan_slug ||
+            payload?.plan ||
+            payload?.metadata?.plan_slug
 
-        if (!planSlug) {
-            throw new Error('CRITICAL: plan_slug não enviado pelo frontend')
+        // Fallback final: buscar no payment_intents
+        if (!planSlug && uniqueKey) {
+            const { data: intent } = await supabase
+                .from('payment_intents')
+                .select('plan_slug')
+                .eq('transaction_id', uniqueKey)
+                .single()
+
+            planSlug = intent?.plan_slug
         }
 
+        if (!planSlug) {
+            throw new Error('CRITICAL: plan_slug não encontrado em nenhuma fonte')
+        }
+
+        /* ======================================================
+           💰 PREÇO — FONTE ÚNICA NO BANCO
+        ====================================================== */
         const { data: plan } = await supabase
-            .from('plans') // ajuste se sua tabela tiver outro nome
+            .from('plans') // ajuste se o nome for diferente
             .select('price_cents')
             .eq('slug', planSlug)
             .single()
@@ -88,7 +105,7 @@ export default async function handler(req, res) {
 
             const customer = {
                 name: payload?.name || 'Cliente',
-                email: payload?.email,
+                email: payload?.email || null,
                 phone: payload?.phone || null,
                 document: payload?.document || null,
                 ip: payload?.client_ip || safeIp
