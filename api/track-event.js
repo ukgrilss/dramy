@@ -52,7 +52,22 @@ export default async function handler(req, res) {
             }
 
             // IDEMPOTENCY CHECK
-            const uniqueKey = transactionId || `lead_${userId}`
+            // 🛑 STRICT TRANSACTION ID STANDARDIZATION 🛑
+            // Priority:
+            // 1. payload.gateway_transaction_id (Explicit)
+            // 2. payload.payment_id (PushinPay Common)
+            // 3. payload.pix_id (PushinPay Common)
+            // 4. transactionId (Root param - fallback)
+            // 5. lead_{userId} (Last resort)
+
+            const gatewayId = payload?.gateway_transaction_id || payload?.payment_id || payload?.pix_id
+            const uniqueKey = gatewayId || transactionId || `lead_${userId}`
+
+            // Debug Log for Gateway ID Discrepancies
+            if (gatewayId && transactionId && gatewayId !== transactionId) {
+                console.log(`[TrackEvent] ID MISMATCH FIXED: Using GatewayID (${gatewayId}) instead of InternalID (${transactionId})`)
+            }
+
             const { data: existingLog } = await supabase
                 .from('integration_logs')
                 .select('id')
