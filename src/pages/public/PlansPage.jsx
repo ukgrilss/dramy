@@ -11,8 +11,24 @@ export default function PlansPage() {
     const navigate = useNavigate()
 
     useEffect(() => {
-        // ⚡ UTMify Event: InitiateCheckout (S2S)
-        // Disparado no Backend para cumprir a regra "S2S Postback"
+        // ---------------------------------------------------------
+        // 1. RASTREAMENTO CLIENT-SIDE (Visual / Pixel Helper)
+        // ---------------------------------------------------------
+        let attempts = 0
+        const interval = setInterval(() => {
+            if (window.utmify) {
+                console.log('[Pixel] InitiateCheckout Disparado (Client)')
+                window.utmify.track('InitiateCheckout')
+                clearInterval(interval)
+            } else {
+                attempts++
+                if (attempts >= 20) clearInterval(interval) // 10 segundos
+            }
+        }, 500)
+
+        // ---------------------------------------------------------
+        // 2. RASTREAMENTO SERVER-SIDE (S2S / UTMify Config)
+        // ---------------------------------------------------------
         if (user) {
             fetch('/api/track-event', {
                 method: 'POST',
@@ -20,10 +36,11 @@ export default function PlansPage() {
                 body: JSON.stringify({
                     event: 'initiate_checkout',
                     userId: user.id
-                    // Payload is handled server-side
                 })
-            }).catch(err => console.error('IC Tracking Error:', err))
+            }).catch(err => console.error('S2S Error:', err))
         }
+
+        return () => clearInterval(interval)
     }, [user])
 
     const plans = [
