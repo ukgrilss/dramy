@@ -72,6 +72,27 @@ export default async function handler(req, res) {
             // =================================================================================
             if (integration.name === 'utmify' && process.env.UTMIFY_API_KEY) {
 
+                // 🛑 STRICT DEDUPLICATION 🛑
+                // We MUST ensure only ONE 'pix_pending' anchor exists per transaction.
+                // If it already exists, we DO NOT send to UTMify again.
+                if (event === 'pix_created' || event === 'pix_pending' || event === 'waiting_payment') {
+                    const { data: existingAnchor } = await supabase
+                        .from('integration_logs')
+                        .select('id')
+                        .eq('transaction_id', uniqueKey)
+                        .eq('integration_name', 'utmify_env')
+                        .eq('event_name', 'pix_pending')
+                        .eq('status', 'success')
+                        .limit(1)
+                        .single()
+
+                    if (existingAnchor) {
+                        console.log(`[TrackEvent] UTMify Deduplication: 'pix_pending' anchor already exists for ${uniqueKey}. Skipping.`)
+                        results.push({ name: 'utmify', status: 'idempotent_skip_anchor_exists' })
+                        continue
+                    }
+                }
+
                 // Prepare Strict Payload Data
                 const now = new Date()
                 const createdAt = formatStatsDate(now)
