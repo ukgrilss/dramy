@@ -12,10 +12,19 @@ export default function PlansPage() {
 
     useEffect(() => {
         // ⚡ UTMify Event: InitiateCheckout (Pixel)
-        // Disparado ao acessar a página de planos (início do checkout)
-        if (window.utmify) {
-            window.utmify.track('InitiateCheckout')
-        }
+        // Polling para garantir que o script carregou (5 tentativas)
+        let attempts = 0
+        const interval = setInterval(() => {
+            if (window.utmify) {
+                window.utmify.track('InitiateCheckout')
+                clearInterval(interval)
+            } else {
+                attempts++
+                if (attempts >= 10) clearInterval(interval) // Desiste após 5s
+            }
+        }, 500)
+
+        return () => clearInterval(interval)
     }, [])
 
     const plans = [
