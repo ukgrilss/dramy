@@ -119,12 +119,6 @@ export default function PaymentModal({ plan, onClose }) {
         if (user) {
             // ⚡ Save Intent for Webhook Lookup
             if (data?.id) {
-                // ⚡ UTMify Event: InitiateCheckout (Pixel)
-                // Disparado APENAS quando o PIX é gerado com sucesso
-                if (window.utmify) {
-                    window.utmify.track('InitiateCheckout')
-                }
-
                 await supabase
                     .from('payment_intents')
                     .insert({
