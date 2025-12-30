@@ -38,7 +38,11 @@ import Analytics from './pages/admin/Analytics'
 import Suggestions from './pages/admin/Suggestions'
 import Integrations from './pages/admin/Integrations'
 
+import { useContentProtection } from './hooks/useContentProtection'
+
 function App() {
+    useContentProtection() // 🛡️ ATIVA BLOQUEIO DE CÓPIA/DOWNLOAD
+
     return (
         <AuthProvider>
             <TrialTimer />

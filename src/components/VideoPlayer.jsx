@@ -183,11 +183,18 @@ export default function VideoPlayer({ src, title, poster, initialTime = 0, onPro
 
                 <iframe
                     src={getEmbedUrl(src, initialTime)}
-                    className="w-full h-full border-0"
+                    className="w-full h-full border-0 pointer-events-auto"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                     title={title}
                 />
+
+                {/* 🛡️ SECURITY OVERLAY: Prevents Right-Click on Iframe */}
+                <div
+                    className="absolute inset-0 z-50 bg-transparent w-full h-full"
+                    onContextMenu={(e) => { e.preventDefault(); return false; }}
+                    style={{ pointerEvents: 'none' }} // Allow clicks to pass through if needed, OR remove to block all interaction
+                ></div>
             </div>
         )
     }
