@@ -5,9 +5,9 @@ import { useState } from 'react'
 
 export default function AppNavbar() {
     const { user, signOut } = useAuth()
-    const navigate = useNavigate()
     const location = useLocation()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false) // SEARCH MOBILE
     const [searchTerm, setSearchTerm] = useState('')
 
     const handleSignOut = async () => {
@@ -141,35 +141,63 @@ export default function AppNavbar() {
                     )}
                 </div>
 
-                {/* Mobile Menu Button */}
-                <button
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="md:hidden p-2 text-white hover:text-primary transition-colors"
-                >
-                    {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                </button>
+                {/* Mobile Search & Menu Actions */}
+                <div className="flex items-center gap-4 md:hidden">
+                    <button
+                        onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                        className="text-white hover:text-primary transition-colors"
+                    >
+                        {isMobileSearchOpen ? <X className="h-6 w-6" /> : <Search className="h-6 w-6" />}
+                    </button>
+
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="text-white hover:text-primary transition-colors"
+                    >
+                        {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                    </button>
+                </div>
             </div>
+
+            {/* Mobile Search Bar (Expandable) */}
+            {isMobileSearchOpen && (
+                <div className="md:hidden bg-black/95 backdrop-blur-xl border-b border-white/10 p-4 animate-in slide-in-from-top-2">
+                    <form onSubmit={(e) => { handleSearch(e); setIsMobileSearchOpen(false); }} className="relative">
+                        <input
+                            type="text"
+                            placeholder="O que você quer assistir?"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            autoFocus
+                            className="w-full bg-white/10 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white placeholder:text-gray-400 focus:outline-none focus:border-primary focus:bg-white/20"
+                        />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    </form>
+                </div>
+            )}
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
                 <div className="md:hidden bg-black/95 backdrop-blur-xl border-t border-white/10 p-4 space-y-2">
-                    {navItems.map((item) => {
-                        const Icon = item.icon
-                        return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className={`flex items-center gap-3 p-3 rounded-lg transition-all ${isActive(item.path)
-                                    ? 'bg-primary text-white'
-                                    : 'text-gray-300 hover:bg-white/5'
-                                    }`}
-                            >
-                                <Icon className="w-5 h-5" />
-                                {item.label}
-                            </Link>
-                        )
-                    })}
+                    {navItems
+                        .filter(item => item.path !== '/conteudos') // REMOVE "Explorar" from Mobile
+                        .map((item) => {
+                            const Icon = item.icon
+                            return (
+                                <Link
+                                    key={item.path}
+                                    to={item.path}
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${isActive(item.path)
+                                        ? 'bg-primary text-white'
+                                        : 'text-gray-300 hover:bg-white/5'
+                                        }`}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    {item.label}
+                                </Link>
+                            )
+                        })}
 
                     <div className="h-px bg-white/10 my-2"></div>
 
