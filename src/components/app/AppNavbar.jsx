@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { Clapperboard, Home, Film, Tv, User, CreditCard, LogOut, Settings, Menu, X } from 'lucide-react'
+import { Clapperboard, Home, Film, Tv, User, CreditCard, LogOut, Settings, Menu, X, Search } from 'lucide-react'
 import { useState } from 'react'
 
 export default function AppNavbar() {
@@ -8,15 +8,24 @@ export default function AppNavbar() {
     const navigate = useNavigate()
     const location = useLocation()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
 
     const handleSignOut = async () => {
         await signOut()
         navigate('/login')
     }
 
+    const handleSearch = (e) => {
+        e.preventDefault()
+        if (searchTerm.trim()) {
+            navigate(`/conteudos?q=${searchTerm}`)
+        }
+    }
+
     const navItems = [
         { path: '/', icon: Home, label: 'Início' },
-        { path: '/minha-lista', icon: Film, label: 'Minha Lista' },
+        { path: '/conteudos', icon: Film, label: 'Explorar' }, // Updated link to point to catalog
+        { path: '/minha-lista', icon: Tv, label: 'Minha Lista' },
     ]
 
     const isActive = (path) => {
@@ -29,15 +38,15 @@ export default function AppNavbar() {
         <nav className="fixed top-0 z-50 w-full bg-black/90 backdrop-blur-md border-b border-white/10">
             <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
                 {/* Logo */}
-                <Link to="/" className="flex items-center gap-2 text-2xl font-black text-white">
+                <Link to="/" className="flex items-center gap-2 text-2xl font-black text-white mr-8">
                     <Clapperboard className="h-8 w-8 text-primary" />
-                    <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+                    <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent hidden sm:block">
                         Dramy
                     </span>
                 </Link>
 
                 {/* Desktop Navigation */}
-                <div className="hidden md:flex items-center gap-6">
+                <div className="hidden md:flex items-center gap-6 mr-auto">
                     {navItems.map((item) => {
                         const Icon = item.icon
                         return (
@@ -54,6 +63,25 @@ export default function AppNavbar() {
                             </Link>
                         )
                     })}
+                </div>
+
+                {/* Search Bar (Desktop) */}
+                <div className="hidden md:flex items-center mr-4">
+                    <form onSubmit={handleSearch} className="relative group">
+                        <input
+                            type="text"
+                            placeholder="Buscar filmes, séries..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="bg-black/50 border border-white/10 rounded-full py-2 pl-4 pr-10 text-sm text-white focus:outline-none focus:border-primary/50 focus:w-64 w-48 transition-all duration-300 placeholder:text-gray-500"
+                        />
+                        <button
+                            type="submit"
+                            className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-white transition-colors"
+                        >
+                            <Search className="w-4 h-4" />
+                        </button>
+                    </form>
                 </div>
 
                 {/* Desktop User Menu */}
