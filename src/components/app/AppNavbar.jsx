@@ -162,28 +162,44 @@ export default function AppNavbar() {
             {/* Mobile Search Bar (Expandable) */}
             {isMobileSearchOpen && (
                 <div className="md:hidden bg-black/95 backdrop-blur-xl border-b border-white/10 p-4 animate-in slide-in-from-top-2">
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault(); // STOP reload
-                            handleSearch(e);
-                            setIsMobileSearchOpen(false);
-                            // Force blur to close keyboard
-                            document.activeElement?.blur();
-                        }}
-                        className="relative"
-                    >
+                    <div className="relative">
                         <input
-                            type="search" // Shows "Search" button on iOS/Android keyboard
+                            type="search"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleSearch(e)
+                                    setIsMobileSearchOpen(false)
+                                    e.target.blur()
+                                }
+                            }}
                             placeholder="O que você quer assistir?"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             autoFocus
-                            className="w-full bg-white/10 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white placeholder:text-gray-400 focus:outline-none focus:border-primary focus:bg-white/20 appearance-none"
+                            className="w-full bg-white/10 border border-white/10 rounded-lg py-3 pl-12 pr-12 text-white placeholder:text-gray-400 focus:outline-none focus:border-primary focus:bg-white/20 appearance-none"
                         />
-                        <button type="submit" className="absolute left-4 top-1/2 -translate-y-1/2">
-                            <Search className="w-5 h-5 text-gray-400" />
+
+                        {/* Search Icon / Submit Button */}
+                        <button
+                            onClick={(e) => {
+                                handleSearch(e)
+                                setIsMobileSearchOpen(false)
+                            }}
+                            className="absolute left-0 top-0 h-full w-12 flex items-center justify-center text-gray-400"
+                        >
+                            <Search className="w-5 h-5" />
                         </button>
-                    </form>
+
+                        {/* Close/Clear Button */}
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-gray-400 hover:text-white"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
 
