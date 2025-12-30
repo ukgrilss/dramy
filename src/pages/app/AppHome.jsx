@@ -27,7 +27,7 @@ export default function AppHome() {
             const { data: seriesData, error } = await supabase
                 .from('series')
                 .select('*')
-                .limit(300)
+                .limit(2000)
                 .order('created_at', { ascending: false })
 
             if (error) {

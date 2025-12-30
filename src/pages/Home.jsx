@@ -25,7 +25,7 @@ export default function Home() {
             const { data: moviesData } = await supabase
                 .from('filmes')
                 .select('*')
-                .limit(300)
+                .limit(2000)
                 .order('created_at', { ascending: false })
 
             // Fetch Banners (Raw)
