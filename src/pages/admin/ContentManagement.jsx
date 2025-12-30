@@ -52,15 +52,34 @@ export default function ContentManagement() {
 
     const fetchContent = async () => {
         try {
-            const { data, error } = await supabase
-                .from('series')
-                .select('*')
-                .order('created_at', { ascending: false })
+            let allData = []
+            let page = 0
+            const pageSize = 1000
+            let hasMore = true
 
-            if (error) throw error
+            while (hasMore) {
+                const { data, error } = await supabase
+                    .from('series')
+                    .select('*')
+                    .range(page * pageSize, (page + 1) * pageSize - 1)
+                    .order('created_at', { ascending: false })
+
+                if (error) throw error
+
+                if (data.length > 0) {
+                    allData = [...allData, ...data]
+                    page++
+                    // If we got fewer than pageSize, we reached the end
+                    if (data.length < pageSize) {
+                        hasMore = false
+                    }
+                } else {
+                    hasMore = false
+                }
+            }
 
             // Map English DB columns to Portuguese UI state
-            const mappedContent = (data || []).map(item => ({
+            const mappedContent = (allData || []).map(item => ({
                 id: item.id,
                 titulo: item.title,
                 descricao: item.description,

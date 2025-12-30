@@ -63,10 +63,10 @@ const Dashboard = () => {
             })
 
             const PRICES = {
-                'monthly': 29.90,   // VIP Mensal
-                'annual': 299.90,   // Família Anual
-                'quarterly': 79.90, // Básico
-                'lifetime': 499.90
+                'monthly': 9.99,    // VIP Mensal - R$ 9,99
+                'annual': 59.90,    // Família Anual - R$ 59,90
+                'quarterly': 27.90, // Trimestral - R$ 27,90
+                'lifetime': 97.90   // Vitalício - R$ 97,90
             }
 
             const totalMrr =

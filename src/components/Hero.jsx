@@ -8,6 +8,7 @@ export default function Hero({ banners, movies, history = [] }) {
     const [isHovered, setIsHovered] = useState(false)
     const [touchStart, setTouchStart] = useState(null)
     const [touchEnd, setTouchEnd] = useState(null)
+    const [isMounted, setIsMounted] = useState(false)
 
     // Minimum swipe distance (in px) 
     const minSwipeDistance = 50
@@ -29,6 +30,11 @@ export default function Hero({ banners, movies, history = [] }) {
             if (isRightSwipe) prevBanner()
         }
     }
+
+    // Mount animation trigger
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
 
     // Auto-rotate
     useEffect(() => {
@@ -75,7 +81,8 @@ export default function Hero({ banners, movies, history = [] }) {
 
     return (
         <div
-            className="relative h-[85vh] w-full overflow-hidden group"
+            className={`relative min-h-[550px] w-full overflow-hidden group transition-all duration-1000 ${isMounted ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]'
+                }`}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onTouchStart={onTouchStart}
@@ -91,62 +98,81 @@ export default function Hero({ banners, movies, history = [] }) {
                         style={{ backgroundImage: `url(${bannerImage})` }}
                     ></div>
 
-                    {/* Main Image */}
+                    {/* Main Image with continuous breathing */}
                     <img
                         src={bannerImage}
-                        className="h-full w-full object-cover object-center transition-transform duration-[10s] ease-in-out scale-100 group-hover:scale-105"
+                        className="h-full w-full object-cover object-center"
+                        style={{
+                            animation: 'heroBreath 20s ease-in-out infinite',
+                            transformOrigin: 'center center'
+                        }}
                         alt="Hero"
                     />
 
-                    {/* Cinematic Gradients */}
+                    {/* Cinematic Gradients - Extended for seamless blend */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/40 to-transparent"></div>
                     <div className="absolute inset-0 bg-gradient-to-r from-[#080808] via-[#080808]/60 to-transparent"></div>
-                    <div className="absolute bottom-0 h-32 w-full bg-gradient-to-t from-[#080808] to-transparent"></div>
+                    <div className="absolute bottom-0 h-64 w-full bg-gradient-to-t from-[#080808] via-[#080808]/90 to-transparent"></div>
                 </div>
             </div>
 
             {/* Content Layer */}
-            <div className="absolute bottom-0 left-0 z-20 w-full p-6 md:p-12 lg:p-20 pb-20 md:pb-24">
-                <div className="max-w-3xl space-y-6 animate-slideUp">
+            <div className="absolute bottom-0 left-0 z-20 w-full p-6 md:p-12 lg:p-20 pb-20 md:pb-24 bg-gradient-to-t from-black via-black/60 to-transparent">
+                <div className="max-w-3xl space-y-4 md:space-y-6">
                     {/* Metadata Badges */}
-                    <div className="flex items-center gap-3 animate-fadeIn delay-100">
-                        <span className="bg-primary/90 text-white px-3 py-1 rounded-sm text-[10px] md:text-xs font-bold uppercase tracking-widest shadow-lg shadow-primary/20">
+                    <div
+                        className={`flex items-center gap-3 transition-all duration-700 ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                            }`}
+                        style={{ transitionDelay: '200ms' }}
+                    >
+                        <span className="bg-primary/90 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest shadow-lg shadow-primary/20 ring-1 ring-white/20">
                             Destaque
                         </span>
-                        <span className="text-green-400 font-bold text-sm">
+                        <span className="text-green-400 font-bold text-sm drop-shadow-md">
                             {bannerRating} pontos
                         </span>
-                        <span className="text-gray-300 text-sm">
+                        <span className="text-gray-200 text-sm drop-shadow-md font-medium">
                             {bannerYear}
                         </span>
                     </div>
 
-                    {/* Title */}
-                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white drop-shadow-2xl leading-none tracking-tight">
+                    {/* Title - Optimized for Mobile */}
+                    <h1
+                        className={`text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white drop-shadow-2xl leading-[1.1] tracking-tight transition-all duration-700 ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+                            }`}
+                        style={{ transitionDelay: '400ms' }}
+                    >
                         {bannerTitle}
                     </h1>
 
                     {/* Description */}
-                    <p className="text-gray-200 text-sm md:text-lg line-clamp-3 md:line-clamp-2 max-w-2xl drop-shadow-md font-medium">
+                    <p
+                        className={`text-gray-200/90 text-sm md:text-lg line-clamp-3 md:line-clamp-2 max-w-2xl drop-shadow-md font-medium leading-relaxed transition-all duration-700 ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                            }`}
+                        style={{ transitionDelay: '600ms' }}
+                    >
                         {bannerDesc}
                     </p>
 
-                    {/* Action Buttons */}
-                    <div className="flex flex-wrap items-center gap-4 pt-4">
+                    {/* Action Buttons - Mobile Optimized */}
+                    <div
+                        className={`flex items-center gap-3 pt-4 transition-all duration-700 ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                            }`}
+                        style={{ transitionDelay: '800ms' }}
+                    >
                         <button
                             onClick={() => handleWatch(bannerMovie || firstMovie)}
-                            className="bg-white text-black hover:bg-white/90 px-8 py-3.5 rounded-md font-bold text-lg transition-all flex items-center gap-3 transform hover:scale-105 active:scale-95 shadow-xl shadow-white/10"
+                            className="flex-1 md:flex-none bg-white text-black hover:bg-white/90 px-6 py-3.5 rounded-xl font-bold text-base md:text-lg transition-all flex items-center justify-center gap-2 transform active:scale-95 shadow-xl shadow-white/10"
                         >
-                            <Play className="fill-black w-6 h-6" />
-                            {hasProgress ? 'Continuar Assistindo' : 'Assistir'}
+                            <Play className="fill-black w-5 h-5 md:w-6 md:h-6" />
+                            {hasProgress ? 'Continuar' : 'Assistir'}
                         </button>
 
                         <button
                             onClick={() => navigate(`/title/${activeItem?.id}`)}
-                            className="bg-white/20 backdrop-blur-sm border border-white/20 hover:bg-white/30 text-white px-6 py-3.5 rounded-md font-bold text-lg transition-all flex items-center gap-3 transform hover:scale-105 active:scale-95"
+                            className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 text-white px-4 py-3.5 rounded-xl font-bold text-base md:text-lg transition-all flex items-center justify-center gap-2 transform active:scale-95"
                         >
-                            <Info className="w-6 h-6" />
-                            Mais Info
+                            <Info className="w-5 h-5 md:w-6 md:h-6" />
                         </button>
                     </div>
                 </div>
