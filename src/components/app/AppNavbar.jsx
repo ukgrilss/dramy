@@ -9,6 +9,7 @@ export default function AppNavbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false) // SEARCH MOBILE
     const [searchTerm, setSearchTerm] = useState('')
+    const navigate = useNavigate()
 
     const handleSignOut = async () => {
         await signOut()
@@ -24,7 +25,7 @@ export default function AppNavbar() {
 
     const navItems = [
         { path: '/', icon: Home, label: 'Início' },
-        { path: '/conteudos', icon: Film, label: 'Explorar' }, // Updated link to point to catalog
+        { path: '/conteudos', icon: Film, label: 'Explorar' },
         { path: '/minha-lista', icon: Tv, label: 'Minha Lista' },
     ]
 
@@ -162,30 +163,33 @@ export default function AppNavbar() {
             {/* Mobile Search Bar (Expandable) */}
             {isMobileSearchOpen && (
                 <div className="md:hidden bg-black/95 backdrop-blur-xl border-b border-white/10 p-4 animate-in slide-in-from-top-2">
-                    <div className="relative">
+                    <form
+                        action="."
+                        onSubmit={(e) => {
+                            e.preventDefault()
+                            if (searchTerm.trim()) {
+                                navigate(`/conteudos?q=${searchTerm}`)
+                                setIsMobileSearchOpen(false)
+                                document.activeElement?.blur()
+                            }
+                        }}
+                        className="relative flex items-center"
+                    >
                         <input
                             type="search"
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleSearch(e)
-                                    setIsMobileSearchOpen(false)
-                                    e.target.blur()
-                                }
-                            }}
+                            name="q"
+                            inputMode="search"
                             placeholder="O que você quer assistir?"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             autoFocus
-                            className="w-full bg-white/10 border border-white/10 rounded-lg py-3 pl-12 pr-12 text-white placeholder:text-gray-400 focus:outline-none focus:border-primary focus:bg-white/20 appearance-none"
+                            className="w-full bg-white/10 border border-white/10 rounded-lg py-3 pl-12 pr-12 text-white placeholder:text-gray-400 focus:outline-none focus:border-primary focus:bg-white/20"
                         />
 
-                        {/* Search Icon / Submit Button */}
+                        {/* Search Icon (Submit Trigger) */}
                         <button
-                            onClick={(e) => {
-                                handleSearch(e)
-                                setIsMobileSearchOpen(false)
-                            }}
-                            className="absolute left-0 top-0 h-full w-12 flex items-center justify-center text-gray-400"
+                            type="submit"
+                            className="absolute left-0 top-0 h-full w-12 flex items-center justify-center text-gray-400 group-focus-within:text-primary transition-colors"
                         >
                             <Search className="w-5 h-5" />
                         </button>
@@ -193,13 +197,14 @@ export default function AppNavbar() {
                         {/* Close/Clear Button */}
                         {searchTerm && (
                             <button
+                                type="button"
                                 onClick={() => setSearchTerm('')}
                                 className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-gray-400 hover:text-white"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         )}
-                    </div>
+                    </form>
                 </div>
             )}
 
