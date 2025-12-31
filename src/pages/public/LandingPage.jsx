@@ -181,9 +181,6 @@ export default function LandingPage() {
                         {/* VSL Video - Centered */}
                         <div className="relative max-w-md mx-auto">
                             <div className="rounded-2xl overflow-hidden shadow-2xl shadow-pink-500/30 border-2 border-pink-500/50">
-                                <script src="https://fast.wistia.com/player.js" async></script>
-                                <script src="https://fast.wistia.com/embed/51r3j7nlhl.js" async type="module"></script>
-                                <style>{`wistia-player[media-id='51r3j7nlhl']:not(:defined) { background: center / contain no-repeat url('https://fast.wistia.com/embed/medias/51r3j7nlhl/swatch'); display: block; filter: blur(5px); padding-top:181.67%; }`}</style>
                                 <wistia-player media-id="51r3j7nlhl" aspect="0.5504587155963303"></wistia-player>
                             </div>
                             {/* Social Proof Badge */}
