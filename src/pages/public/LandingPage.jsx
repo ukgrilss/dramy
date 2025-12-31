@@ -181,7 +181,13 @@ export default function LandingPage() {
                         {/* VSL Video - Centered */}
                         <div className="relative max-w-md mx-auto">
                             <div className="rounded-2xl overflow-hidden shadow-2xl shadow-pink-500/30 border-2 border-pink-500/50">
-                                <wistia-player media-id="51r3j7nlhl" aspect="0.5504587155963303"></wistia-player>
+                                <wistia-player
+                                    media-id="51r3j7nlhl"
+                                    aspect="0.5504587155963303"
+                                    playButton="true"
+                                    controlsVisibleOnLoad="true"
+                                    playbar="true"
+                                ></wistia-player>
                             </div>
                             {/* Social Proof Badge */}
                             <div className="absolute -top-3 -left-3 bg-pink-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2 animate-bounce">
