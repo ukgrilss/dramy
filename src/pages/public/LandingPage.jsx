@@ -181,7 +181,10 @@ export default function LandingPage() {
                         {/* VSL Video - Centered */}
                         <div className="relative max-w-md mx-auto">
                             <div className="rounded-2xl overflow-hidden shadow-2xl shadow-pink-500/30 border-2 border-pink-500/50">
-                                <wistia-player media-id="jc3rfgrf8n" aspect="0.5660377358490566"></wistia-player>
+                                <script src="https://fast.wistia.com/player.js" async></script>
+                                <script src="https://fast.wistia.com/embed/51r3j7nlhl.js" async type="module"></script>
+                                <style>{`wistia-player[media-id='51r3j7nlhl']:not(:defined) { background: center / contain no-repeat url('https://fast.wistia.com/embed/medias/51r3j7nlhl/swatch'); display: block; filter: blur(5px); padding-top:181.67%; }`}</style>
+                                <wistia-player media-id="51r3j7nlhl" aspect="0.5504587155963303"></wistia-player>
                             </div>
                             {/* Social Proof Badge */}
                             <div className="absolute -top-3 -left-3 bg-pink-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2 animate-bounce">
@@ -311,157 +314,14 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* Plans Section */}
-            <section id="planos" className="py-20 px-4 bg-white/5">
-                <div className="container mx-auto max-w-6xl">
-                    <h2 className="text-4xl md:text-5xl font-black text-center mb-4">
-                        Escolha seu plano
-                    </h2>
-                    <p className="text-gray-400 text-center mb-16 text-lg">
-                        Todos os planos incluem acesso total ao catálogo
-                    </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {plans.map((plan) => (
-                            <div
-                                key={plan.name}
-                                className={`relative bg-card border rounded-2xl p-6 ${plan.highlight
-                                    ? 'border-primary shadow-2xl shadow-primary/20 md:scale-105'
-                                    : plan.popular
-                                        ? 'border-primary/50'
-                                        : 'border-white/10'
-                                    }`}
-                            >
-                                {plan.popular && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-1 rounded-full text-sm font-bold">
-                                        Mais Popular
-                                    </div>
-                                )}
-                                {plan.highlight && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-purple-500 text-white px-4 py-1 rounded-full text-sm font-bold">
-                                        Melhor Oferta
-                                    </div>
-                                )}
 
-                                <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                                {plan.savings && (
-                                    <p className="text-green-400 text-sm font-bold mb-4">{plan.savings}</p>
-                                )}
-                                <div className="mb-6">
-                                    <span className="text-5xl font-black">{plan.price}</span>
-                                    <span className="text-gray-400 text-sm ml-2">{plan.period}</span>
-                                </div>
 
-                                <ul className="space-y-3 mb-8">
-                                    {plan.features.map((feature, index) => (
-                                        <li key={index} className="flex items-start gap-2">
-                                            <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                                            <span className="text-sm text-gray-300">{feature}</span>
-                                        </li>
-                                    ))}
-                                </ul>
 
-                                <Link
-                                    to={user ? '/planos' : plan.checkoutUrl}
-                                    className={`block w-full py-4 rounded-lg font-bold text-center transition-all transform hover:scale-105 ${plan.highlight
-                                        ? 'bg-gradient-to-r from-primary to-purple-500 text-white shadow-lg shadow-primary/50'
-                                        : 'bg-primary hover:bg-primary/90 text-white'
-                                        }`}
-                                >
-                                    Assinar Agora
-                                </Link>
-                            </div>
-                        ))}
-                    </div>
 
-                    {/* Guarantee Badge - Below Vitalício Plan */}
-                    <div className="mt-12 flex justify-center">
-                        <div className="bg-gradient-to-br from-primary/20 to-purple-500/20 border-2 border-primary/50 rounded-2xl p-8 max-w-md text-center shadow-2xl shadow-primary/20">
-                            <img
-                                src="https://i.postimg.cc/0N1Lys5b/10002431-Photoroom.png"
-                                alt="Garantia de 7 Dias"
-                                className="w-32 h-32 mx-auto mb-4 drop-shadow-2xl"
-                            />
-                            <h3 className="text-2xl font-black text-white mb-2">
-                                Garantia de 7 Dias
-                            </h3>
-                            <p className="text-primary font-bold mb-2">
-                                100% do seu dinheiro de volta
-                            </p>
-                            <p className="text-gray-300 text-sm">
-                                Não gostou? Devolvemos seu investimento sem perguntas. Risco zero para você!
-                            </p>
-                        </div>
-                    </div>
 
-                    <p className="text-center text-gray-500 text-sm mt-8">
-                        💳 Aceitamos cartão de crédito, PIX e boleto • 🔒 Pagamento 100% seguro
-                    </p>
-                </div>
-            </section>
-
-            {/* Testimonials */}
-            <section className="py-20 px-4">
-                <div className="container mx-auto max-w-6xl">
-                    <h2 className="text-4xl md:text-5xl font-black text-center mb-16">
-                        O que nossos assinantes dizem
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {testimonials.map((testimonial, index) => (
-                            <div key={index} className="bg-card border border-white/10 rounded-xl p-6">
-                                <div className="flex gap-1 mb-4">
-                                    {[...Array(testimonial.rating)].map((_, i) => (
-                                        <Star key={i} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                                    ))}
-                                </div>
-                                <p className="text-gray-300 mb-4">"{testimonial.text}"</p>
-                                <p className="font-bold">{testimonial.name}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Devices */}
-            <section className="py-20 px-4 bg-white/5">
-                <div className="container mx-auto max-w-4xl text-center">
-                    <h2 className="text-4xl md:text-5xl font-black mb-8">
-                        Assista em qualquer dispositivo
-                    </h2>
-                    <p className="text-gray-400 mb-12 text-lg">
-                        Compatível com todos os seus dispositivos favoritos
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-8">
-                        <div className="flex flex-col items-center">
-                            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mb-3">
-                                <Tv className="w-10 h-10 text-primary" />
-                            </div>
-                            <p className="font-bold">Smart TV</p>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mb-3">
-                                <Monitor className="w-10 h-10 text-primary" />
-                            </div>
-                            <p className="font-bold">Computador</p>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mb-3">
-                                <Smartphone className="w-10 h-10 text-primary" />
-                            </div>
-                            <p className="font-bold">Celular</p>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mb-3">
-                                <Tablet className="w-10 h-10 text-primary" />
-                            </div>
-                            <p className="font-bold">Tablet</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Final CTA */}
-            <section className="py-20 px-4">
+            {/* Final CTA - TESTE GRÁTIS */}
+            <section id="planos" className="py-20 px-4">
                 <div className="container mx-auto max-w-4xl text-center">
                     <h2 className="text-4xl md:text-6xl font-black mb-6">
                         Pronto para começar?
@@ -469,21 +329,12 @@ export default function LandingPage() {
                     <p className="text-xl text-gray-300 mb-8">
                         Junte-se a milhares de pessoas que já estão assistindo
                     </p>
-                    {user ? (
-                        <Link
-                            to="/planos"
-                            className="inline-block bg-primary hover:bg-primary/90 text-white px-12 py-5 rounded-lg font-bold text-xl transition-all transform hover:scale-105 shadow-lg shadow-primary/50"
-                        >
-                            Assinar Agora
-                        </Link>
-                    ) : (
-                        <a
-                            href="#planos"
-                            className="inline-block bg-primary hover:bg-primary/90 text-white px-12 py-5 rounded-lg font-bold text-xl transition-all transform hover:scale-105 shadow-lg shadow-primary/50"
-                        >
-                            Assinar Agora
-                        </a>
-                    )}
+                    <Link
+                        to="/register?trial=true"
+                        className="inline-block bg-pink-500 hover:bg-pink-600 text-white px-16 py-6 rounded-full font-black text-2xl transition-all transform hover:scale-105 shadow-2xl shadow-pink-500/50"
+                    >
+                        TESTE GRÁTIS
+                    </Link>
                     <p className="text-sm text-gray-500 mt-6">
                         Cancele quando quiser • Garantia de 7 dias
                     </p>
