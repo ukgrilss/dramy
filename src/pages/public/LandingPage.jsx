@@ -183,7 +183,7 @@ export default function LandingPage() {
                             <div className="rounded-2xl overflow-hidden shadow-2xl shadow-pink-500/30 border-2 border-pink-500/50">
                                 <div style={{ padding: '181.67% 0 0 0', position: 'relative' }}>
                                     <iframe
-                                        src="https://fast.wistia.net/embed/iframe/51r3j7nlhl?seo=true&videoFoam=true&autoPlay=false&controlsVisibleOnLoad=true&playerColor=ec4899"
+                                        src="https://fast.wistia.net/embed/iframe/51r3j7nlhl?controlsVisibleOnLoad=true&playerColor=ec4899&playsinline=true"
                                         title="Dramy Video"
                                         allow="autoplay; fullscreen"
                                         allowTransparency="true"
@@ -203,7 +203,6 @@ export default function LandingPage() {
                                         }}
                                     ></iframe>
                                 </div>
-                                <script src="https://fast.wistia.net/assets/external/E-v1.js" async></script>
                             </div>
                             {/* Social Proof Badge */}
                             <div className="absolute -top-3 -left-3 bg-pink-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2 animate-bounce">
