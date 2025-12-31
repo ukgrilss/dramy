@@ -9,6 +9,9 @@ export default defineConfig({
             '@': '/src',
         },
     },
+    build: {
+        sourcemap: false, // Disable source maps in production (CVE-2025-DRAMY-008)
+    },
     server: {
         proxy: {
             '/api': {

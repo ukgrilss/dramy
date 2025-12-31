@@ -16,6 +16,7 @@ import {
     Download
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { sanitizeInput } from '@/utils/sanitize'
 
 export default function Profile() {
     const { user, signOut, profile: contextProfile } = useAuth()
@@ -37,23 +38,33 @@ export default function Profile() {
         setMessage(null)
 
         try {
+            // Sanitize input to prevent XSS
+            const sanitizedName = sanitizeInput(newName);
+
+            if (!sanitizedName) {
+                setMessage({ type: 'error', text: 'Nome inválido.' });
+                setUpdateLoading(false);
+                return;
+            }
+
             // Update Auth Metadata
             const { error: authError } = await supabase.auth.updateUser({
-                data: { name: newName }
+                data: { name: sanitizedName }
             })
             if (authError) throw authError
 
             // Update Profiles Table (since we rely on it too)
             const { error: dbError } = await supabase
                 .from('profiles')
-                .update({ full_name: newName })
+                .update({ full_name: sanitizedName })
                 .eq('id', user.id)
 
             if (dbError) throw dbError
 
             // Update local state
-            setProfile(prev => ({ ...prev, full_name: newName }))
+            setProfile(prev => ({ ...prev, full_name: sanitizedName }))
             setEditingMode(null)
+            setNewName('')
             setMessage({ type: 'success', text: 'Nome atualizado com sucesso!' })
         } catch (error) {
             console.error(error)

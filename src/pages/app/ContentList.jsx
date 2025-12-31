@@ -2,11 +2,13 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Play, Search, Loader2 } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { sanitizeInput } from '@/utils/sanitize'
 
 export default function ContentList() {
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
-    const query = searchParams.get('q') || ''
+    const rawQuery = searchParams.get('q') || ''
+    const query = sanitizeInput(rawQuery) // Sanitize to prevent XSS
 
     const [movies, setMovies] = useState([])
     const [loading, setLoading] = useState(true)
