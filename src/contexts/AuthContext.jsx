@@ -93,18 +93,15 @@ export const AuthProvider = ({ children }) => {
                 return { role: metadataRole, id: userId } // Return minimal profile
             }
 
-            // Last fallback: check localStorage
-            const savedRole = localStorage.getItem('userRole')
-            if (savedRole) {
-                setUserRole(savedRole)
-            }
+            // ❌ REMOVED: localStorage fallback (CVE-2025-DRAMY-004)
+            // Roles should ONLY come from JWT metadata or database
+            // Default to 'user' if no role found
+            setUserRole('user')
         } catch (error) {
             console.error('Error fetching user role:', error)
-            // Fallback to localStorage
-            const savedRole = localStorage.getItem('userRole')
-            if (savedRole) {
-                setUserRole(savedRole)
-            }
+            // ❌ REMOVED: localStorage fallback (CVE-2025-DRAMY-004)
+            // Default to 'user' on error
+            setUserRole('user')
         }
     }
 

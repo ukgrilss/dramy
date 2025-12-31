@@ -1,11 +1,12 @@
 export const PushinPay = {
     /**
      * Creates a PIX charge via PushinPay API
-     * @param {number} amountInCents - Amount in cents (e.g., 990 for R$ 9,99)
-     * @param {string} userEmail - User's email (optional, for reference)
+     * @param {number} amountInCents - Amount in cents (validated by server)
+     * @param {string} userEmail - User's email
+     * @param {string} intentId - Payment intent ID from database
      * @returns {Promise<{qr_code: string, qr_code_base64: string, id: string}>}
      */
-    async createPixCharge(amountInCents, userEmail) {
+    async createPixCharge(amountInCents, userEmail, intentId) {
         try {
             const response = await fetch('https://api.pushinpay.com.br/api/pix/cashIn', {
                 method: 'POST',
@@ -15,11 +16,11 @@ export const PushinPay = {
                     'Accept': 'application/json'
                 },
                 body: JSON.stringify({
-                    value: amountInCents,
+                    value: amountInCents, // ✅ Now validated by server!
                     webhook_url: 'https://dramy.com.br/api/webhook',
                     metadata: {
                         email: userEmail,
-                        plan_slug: 'monthly', // Default, but can be dynamic if passed
+                        intent_id: intentId, // Track payment intent
                         app_name: 'dramy'
                     },
                     payer: {

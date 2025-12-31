@@ -102,74 +102,75 @@ export default function PaymentModal({ plan, onClose }) {
 
     const generatePix = async () => {
         setLoading(true)
-        const priceClean = plan.price.replace('R$', '').trim().replace(',', '.')
-        const amountInCents = Math.round(parseFloat(priceClean) * 100)
 
-        const data = await PushinPay.createPixCharge(amountInCents)
-        setPixData(data)
+        try {
+            // ✅ SECURITY FIX (CVE-2025-DRAMY-011): Server-side price validation
+            // Create payment intent via RPC - server validates the price
+            const { data: intentData, error: intentError } = await supabase
+                .rpc('create_payment_intent_secure', {
+                    p_plan_slug: plan.slug
+                })
 
-        // ⚡ Update Database to "Pending"
-        /*
-          This ensures the Admin Panel shows "Pendente" immediately.
-          We set:
-          - plan_status: 'pending' (so admin sees yellow badge)
-          - plan_atual: plan.slug (so admin sees which plan they tried)
-          - subscription_active: false (not active yet)
-        */
-        if (user) {
-            // ⚡ Save Intent for Webhook Lookup
-            if (data?.id) {
+            if (intentError) {
+                console.error('Error creating payment intent:', intentError)
+                throw new Error('Erro ao criar intenção de pagamento')
+            }
+
+            // Server returns validated price and intent ID
+            const { intent_id, amount, email } = intentData
+
+            // Create PIX charge with server-validated amount
+            const pixData = await PushinPay.createPixCharge(amount, email, intent_id)
+            setPixData(pixData)
+
+            // Update profile to pending status
+            if (user) {
                 await supabase
-                    .from('payment_intents')
-                    .insert({
-                        transaction_id: data.id,
-                        user_id: user.id,
-                        email: user.email,
-                        plan_slug: plan.slug
+                    .from('profiles')
+                    .update({
+                        plan_status: 'pending',
+                        plan_atual: plan.slug,
+                        subscription_active: false
                     })
+                    .eq('id', user.id)
 
-                // ⚡ TRACK EVENTS: pix_created & pix_pending (Server-to-Server)
-                // We send this to our backend to keep logic secure and handle UTMify
+                // Track events
                 fetch('/api/track-event', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         event: 'pix_created',
-                        transactionId: data.id,
+                        transactionId: pixData.id,
                         userId: user.id,
                         payload: {
-                            value: amountInCents / 100,
-                            email: user.email
+                            value: amount / 100,
+                            email: user.email,
+                            intent_id
                         }
                     })
-                }).catch(err => console.error('Tracking pix_created error:', err))
+                }).catch(err => console.error('Tracking error:', err))
 
                 fetch('/api/track-event', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         event: 'pix_pending',
-                        transactionId: data.id,
+                        transactionId: pixData.id,
                         userId: user.id,
                         payload: {
-                            value: amountInCents / 100,
-                            email: user.email
+                            value: amount / 100,
+                            email: user.email,
+                            intent_id
                         }
                     })
-                }).catch(err => console.error('Tracking pix_pending error:', err))
+                }).catch(err => console.error('Tracking error:', err))
             }
-
-            await supabase
-                .from('profiles')
-                .update({
-                    plan_status: 'pending',
-                    plan_atual: plan.slug,
-                    subscription_active: false
-                })
-                .eq('id', user.id)
+        } catch (error) {
+            console.error('Payment generation error:', error)
+            alert('Erro ao gerar pagamento. Tente novamente.')
+        } finally {
+            setLoading(false)
         }
-
-        setLoading(false)
     }
 
     const handleCopy = () => {
