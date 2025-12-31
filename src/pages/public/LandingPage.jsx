@@ -181,27 +181,14 @@ export default function LandingPage() {
                         {/* VSL Video - Centered */}
                         <div className="relative max-w-md mx-auto">
                             <div className="rounded-2xl overflow-hidden shadow-2xl shadow-pink-500/30 border-2 border-pink-500/50">
-                                <div style={{ padding: '181.67% 0 0 0', position: 'relative' }}>
-                                    <iframe
-                                        src="https://fast.wistia.net/embed/iframe/51r3j7nlhl?controlsVisibleOnLoad=true&playerColor=ec4899&playsinline=true"
-                                        title="Dramy Video"
-                                        allow="autoplay; fullscreen"
-                                        allowTransparency="true"
-                                        frameBorder="0"
-                                        scrolling="no"
-                                        className="wistia_embed"
-                                        name="wistia_embed"
-                                        allowFullScreen
-                                        width="100%"
-                                        height="100%"
-                                        style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            width: '100%',
-                                            height: '100%'
-                                        }}
-                                    ></iframe>
+                                <div className="wistia_responsive_padding" style={{ padding: '181.67% 0 0 0', position: 'relative' }}>
+                                    <div className="wistia_responsive_wrapper" style={{ height: '100%', left: 0, position: 'absolute', top: 0, width: '100%' }}>
+                                        <div className="wistia_embed wistia_async_51r3j7nlhl seo=false videoFoam=true" style={{ height: '100%', position: 'relative', width: '100%' }}>
+                                            <div className="wistia_swatch" style={{ height: '100%', left: 0, opacity: 0, overflow: 'hidden', position: 'absolute', top: 0, transition: 'opacity 200ms', width: '100%' }}>
+                                                <img src="https://fast.wistia.com/embed/medias/51r3j7nlhl/swatch" style={{ filter: 'blur(5px)', height: '100%', objectFit: 'contain', width: '100%' }} alt="" aria-hidden="true" onLoad={(e) => e.target.parentNode.style.opacity = 1} />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             {/* Social Proof Badge */}
