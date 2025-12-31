@@ -183,7 +183,7 @@ export default function LandingPage() {
                             <div className="rounded-2xl overflow-hidden shadow-2xl shadow-pink-500/30 border-2 border-pink-500/50">
                                 <div style={{ padding: '181.67% 0 0 0', position: 'relative' }}>
                                     <iframe
-                                        src="https://fast.wistia.net/embed/iframe/51r3j7nlhl?videoFoam=true&autoPlay=true"
+                                        src="https://fast.wistia.net/embed/iframe/51r3j7nlhl?seo=true&videoFoam=true&autoPlay=false&controlsVisibleOnLoad=true&playerColor=ec4899"
                                         title="Dramy Video"
                                         allow="autoplay; fullscreen"
                                         allowTransparency="true"
