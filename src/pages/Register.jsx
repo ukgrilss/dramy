@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { ArrowLeft, Mail, Lock, User, Loader2, Sparkles } from 'lucide-react'
@@ -27,6 +27,7 @@ export default function Register() {
             const fingerprint = await generateFingerprint()
             const userAgent = getUserAgent()
             const { data, error } = await supabase.rpc('register_trial_access_v3', {
+                p_ip_address: '127.0.0.1', // FIX: Required by DB function signature
                 p_fingerprint: fingerprint,
                 p_user_agent: userAgent,
                 p_user_id: userId
@@ -35,9 +36,19 @@ export default function Register() {
             return data
         } catch (error) {
             console.error('Error activating trial:', error)
+            alert('ERRO TÉCNICO NO TESTE GRÁTIS: ' + error.message) // VISIBLE ALERT
             return null
         }
     }
+
+    // DEBUG: Verify if parameter is present
+    useEffect(() => {
+        if (isTrialParam) {
+            console.log('📢 MODO TRIAL DETECTADO')
+        } else {
+            console.log('⚠️ MODO PADRÃO (Sem Trial)')
+        }
+    }, [])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -80,17 +91,24 @@ export default function Register() {
                 }).catch(err => console.error('Tracking Error:', err))
 
                 if (isTrial) {
+                    alert('⏳ Ativando seus 10 minutos grátis... Aguarde!') // VISIBLE ALERT
                     const trialResult = await activateFreeTrial(userId)
+
                     if (trialResult?.success) {
+                        alert('✅ SUCESSO! 10 Minutos Liberados!\n\nVocê será redirecionado.')
                         localStorage.setItem('dramy_trial_used', 'true')
-                        // FIX: Force profile refresh to get the updated trial balance
-                        await new Promise(r => setTimeout(r, 500)) // Small delay for DB propagation
+
+                        await new Promise(r => setTimeout(r, 1000))
                         await refreshProfile()
+                    } else {
+                        alert('❌ ERRO NO TESTE GRÁTIS:\n' + (trialResult?.message || 'Erro desconhecido'))
                     }
                 }
             }
             navigate('/', { replace: true })
         } catch (err) {
+            console.error(err)
+            alert('Erro no cadastro: ' + err.message)
             setError(err.message || 'Erro ao criar conta. Tente novamente.')
         } finally {
             setLoading(false)
