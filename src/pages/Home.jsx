@@ -20,57 +20,84 @@ export default function Home() {
 
     useEffect(() => {
         async function fetchData() {
-            setLoading(true)
-            // Parallel Fetching & Light Payload
-            const [moviesResult, bannersResult] = await Promise.all([
-                supabase
-                    .from('filmes')
-                    .select('id, titulo, capa, categoria, video_url, created_at, novo, destaque') // Select ONLY what is needed
-                    .limit(2000)
-                    .order('created_at', { ascending: false }),
-                supabase
-                    .from('banners')
-                    .select('*')
-                    .eq('ativo', true)
-            ])
+            try {
+                setLoading(true)
+                // Parallel Fetching & Light Payload
+                const [moviesResult, bannersResult] = await Promise.all([
+                    supabase
+                        .from('filmes')
+                        .select('*')
+                        .limit(2000)
+                        .order('created_at', { ascending: false }),
+                    supabase
+                        .from('banners')
+                        .select('*')
+                        .eq('ativo', true)
+                ])
 
-            const { data: moviesData } = moviesResult
-            const { data: bannersData, error: bannersError } = bannersResult
+                const { data: moviesData, error: moviesError } = moviesResult
+                const { data: bannersData, error: bannersError } = bannersResult
 
-            if (bannersError) {
-                console.error('Error fetching banners:', bannersError)
-                // If banners fail, use first 3 movies WITH VIDEO URLs as fallback banners
-                if (moviesData && moviesData.length > 0) {
-                    const moviesWithVideo = moviesData.filter(m => m.video_url && m.video_url.trim() !== '')
-                    const fallbackBanners = moviesWithVideo.slice(0, 3).map(movie => ({
-                        id: movie.id,
-                        filme_id: movie.id,
-                        imagem: movie.capa,
+                if (moviesError) throw moviesError
+
+                // Process Movies
+                const validMovies = moviesData || []
+                setMovies(validMovies)
+
+                // Process Banners (Prioritize DB -> Fallback to Movies)
+                let finalBanners = []
+
+                if (bannersData && !bannersError && bannersData.length > 0) {
+                    // Try joining with movies
+                    finalBanners = bannersData.map(b => {
+                        const relatedMovie = validMovies.find(m => m.id === b.filme_id)
+                        return { ...b, filmes: relatedMovie }
+                    }).filter(b => b.filmes)
+                }
+
+                // Fallback: If no valid banners from DB, use top 5 movies with video/cover
+                if (finalBanners.length === 0 && validMovies.length > 0) {
+                    console.warn("No specific banners found. Using latest movies as fallback.")
+                    finalBanners = validMovies
+                        .filter(m => m.capa && m.video_url) // Only movies with distinct visuals
+                        .slice(0, 5)
+                        .map(m => ({
+                            id: m.id,
+                            filme_id: m.id,
+                            imagem: m.capa,
+                            ativo: true,
+                            filmes: m
+                        }))
+                }
+
+                // Ultimate Fallback: Hardcoded Data if database is completely empty/unreachable
+                if (validMovies.length === 0) {
+                    console.warn("Database empty or unreachable. Using hardcoded mock data.")
+                    validMovies.push({
+                        id: 'mock-1',
+                        titulo: 'Exemplo de Filme',
+                        capa: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80',
+                        categoria: 'Filmes',
+                        sinopse: 'Este Ã© um dados de exemplo pois a conexÃ£o falhou.',
+                        video_url: '#',
+                        created_at: new Date().toISOString()
+                    })
+                    setMovies(validMovies)
+
+                    finalBanners = [{
+                        id: 'mock-b1',
+                        imagem: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80',
                         ativo: true,
-                        filmes: movie
-                    }))
-                    setBanners(fallbackBanners)
+                        filmes: validMovies[0]
+                    }]
                 }
+
+                setBanners(finalBanners)
+            } catch (err) {
+                console.error("CRITICAL ERROR loading Home data:", err)
+            } finally {
+                setLoading(false)
             }
-
-            if (moviesData) {
-                setMovies(moviesData)
-
-                // Manual Join for Banners
-                if (bannersData && !bannersError) {
-                    const joinedBanners = bannersData.map(b => {
-                        const relatedMovie = moviesData.find(m => m.id === b.filme_id)
-                        return {
-                            ...b,
-                            filmes: relatedMovie // Attach manually
-                        }
-                    }).filter(b => b.filmes) // Only keep valid ones
-
-                    setBanners(joinedBanners.length > 0 ? joinedBanners : [])
-                }
-            }
-
-            setLoading(false)
         }
 
         fetchData()
@@ -114,7 +141,7 @@ export default function Home() {
             {/* HERO SECTION */}
             <Hero banners={banners} movies={movies} />
 
-            <div className="container mx-auto px-4 py-8 -mt-20 relative z-30">
+            <div className={`container mx-auto px-4 py-8 relative z-30 ${banners.length > 0 ? '-mt-20' : 'mt-24'}`}>
 
                 {/* Categories Tabs */}
                 <div className="mb-8 flex gap-4 overflow-x-auto pb-4 scrollbar-hide">

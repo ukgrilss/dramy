@@ -192,8 +192,8 @@ export default function Hero({ banners, movies, history = [] }) {
                 <ChevronRight className="w-8 h-8 text-white" />
             </button>
 
-            {/* Pagination Dots */}
-            <div className="absolute bottom-8 right-8 z-30 flex gap-2">
+            {/* Pagination Dots (Desktop Only) */}
+            <div className="absolute bottom-8 right-8 z-30 hidden md:flex gap-2">
                 {banners.map((_, idx) => (
                     <button
                         key={idx}

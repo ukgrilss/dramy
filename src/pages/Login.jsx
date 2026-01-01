@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { ArrowLeft, Mail, Lock, Loader2 } from 'lucide-react'
+import { ArrowLeft, Mail, Lock, Loader2, Play } from 'lucide-react'
 
 export default function Login() {
     const navigate = useNavigate()
@@ -31,88 +31,91 @@ export default function Login() {
     }
 
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
-                {/* Back Button */}
+        <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden font-sans">
+            {/* CINEMATIC BACKGROUND */}
+            <div className="absolute inset-0 z-0">
+                <img
+                    src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2670&auto=format&fit=crop"
+                    alt="Background"
+                    className="w-full h-full object-cover opacity-40"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-purple-900/40 mix-blend-multiply" />
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+            </div>
+
+            <div className="absolute top-6 left-6 z-20">
                 <button
                     onClick={() => navigate(-1)}
-                    className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                    className="flex items-center gap-2 text-white/70 hover:text-white transition-all hover:-translate-x-1"
                 >
                     <ArrowLeft className="w-5 h-5" />
-                    Voltar
+                    <span className="font-bold">Voltar</span>
                 </button>
+            </div>
 
-                {/* Login Card */}
-                <div className="bg-card border border-white/10 rounded-2xl p-8 shadow-2xl">
-                    <div className="text-center mb-8">
-                        <h1 className="text-3xl font-black text-white mb-2">Bem-vindo de volta!</h1>
-                        <p className="text-gray-400">Entre para continuar assistindo</p>
+            {/* GLASS CARD */}
+            <div className="relative z-10 w-full max-w-md">
+                <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-10 shadow-2xl flex flex-col items-center">
+
+                    {/* Brand Logo */}
+                    <div className="mb-8 flex flex-col items-center">
+                        <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-pink-500/20 mb-4 transform hover:rotate-6 transition-transform duration-500">
+                            <Play className="w-8 h-8 text-white fill-white" />
+                        </div>
+                        <h1 className="text-3xl font-black text-white tracking-tight">Bem-vindo de volta</h1>
+                        <p className="text-gray-400 mt-2 text-sm">Entre para continuar sua maratona</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="w-full space-y-5">
                         {/* Email Input */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-300 mb-2">
-                                Email
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Email</label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <Mail className="h-5 w-5 text-gray-500 group-focus-within:text-pink-500 transition-colors" />
+                                </div>
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="w-full bg-background border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                                    className="w-full bg-white/5 border border-white/10 text-white rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-pink-500/50 focus:ring-4 focus:ring-pink-500/10 transition-all placeholder:text-gray-600"
                                     placeholder="seu@email.com"
                                 />
                             </div>
                         </div>
 
                         {/* Password Input */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-300 mb-2">
-                                Senha
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center ml-1">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Senha</label>
+                                <button
+                                    type="button"
+                                    onClick={() => alert('Recurso em desenvolvimento.')}
+                                    className="text-xs text-pink-400 hover:text-pink-300 transition-colors"
+                                >
+                                    Esqueceu?
+                                </button>
+                            </div>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <Lock className="h-5 w-5 text-gray-500 group-focus-within:text-purple-500 transition-colors" />
+                                </div>
                                 <input
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="w-full bg-background border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                                    className="w-full bg-white/5 border border-white/10 text-white rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all placeholder:text-gray-600"
                                     placeholder="••••••••"
                                 />
                             </div>
                         </div>
 
-                        {/* Forgot Password Link */}
-                        <div className="flex justify-end mt-2">
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    if (!email) {
-                                        setError('Digite seu email para recuperar a senha.')
-                                        return
-                                    }
-                                    try {
-                                        // Supabase reset password logic would go here
-                                        // await supabase.auth.resetPasswordForEmail(email)
-                                        alert('Para redefinir sua senha, entre em contato com o suporte ou aguarde a implementação do envio de email.')
-                                    } catch (err) {
-                                        setError('Erro ao solicitar redefinição.')
-                                    }
-                                }}
-                                className="text-sm text-primary hover:text-primary/80 transition-colors"
-                            >
-                                Esqueci minha senha
-                            </button>
-                        </div>
-
                         {/* Error Message */}
                         {error && (
-                            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-sm">
-                                {error}
+                            <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-start gap-3 animate-shake">
+                                <div className="text-red-200 text-sm font-medium">{error}</div>
                             </div>
                         )}
 
@@ -120,25 +123,28 @@ export default function Login() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+                            className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-900/30 transform transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
                         >
                             {loading ? (
                                 <>
                                     <Loader2 className="w-5 h-5 animate-spin" />
-                                    Entrando...
+                                    <span>Entrando...</span>
                                 </>
                             ) : (
-                                'Entrar'
+                                <>
+                                    <span>Entrar na Plataforma</span>
+                                    <Play className="w-4 h-4 fill-white group-hover:translate-x-1 transition-transform" />
+                                </>
                             )}
                         </button>
                     </form>
 
-                    {/* Register Link */}
-                    <div className="mt-6 text-center">
-                        <p className="text-gray-400">
-                            Não tem uma conta?{' '}
-                            <Link to="/register" className="text-primary font-bold hover:underline">
-                                Cadastre-se grátis
+                    {/* Footer */}
+                    <div className="mt-8 text-center">
+                        <p className="text-gray-400 text-sm">
+                            Novo por aqui?{' '}
+                            <Link to="/register" className="text-white font-bold hover:text-pink-400 transition-colors">
+                                Crie sua conta grátis
                             </Link>
                         </p>
                     </div>

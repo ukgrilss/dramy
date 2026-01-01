@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { ArrowLeft, Mail, Lock, User, Loader2 } from 'lucide-react'
+import { ArrowLeft, Mail, Lock, User, Loader2, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { generateFingerprint, getUserAgent } from '@/lib/fingerprint'
 
@@ -11,7 +11,6 @@ export default function Register() {
     const [searchParams] = useSearchParams()
     const isTrialParam = searchParams.get('trial') === 'true'
 
-    // Simple Client-Side Abuse Prevention
     const hasUsedTrial = localStorage.getItem('dramy_trial_used') === 'true'
     const isTrial = isTrialParam && !hasUsedTrial
 
@@ -26,17 +25,11 @@ export default function Register() {
         try {
             const fingerprint = await generateFingerprint()
             const userAgent = getUserAgent()
-
-            // SECURITY UPDATE: IP is now detected Server-Side (headers).
-            // We no longer send it from the client to prevent spoofing.
-
-            // Register trial access
             const { data, error } = await supabase.rpc('register_trial_access', {
                 p_fingerprint: fingerprint,
                 p_user_agent: userAgent,
                 p_user_id: userId
             })
-
             if (error) throw error
             return data
         } catch (error) {
@@ -53,7 +46,6 @@ export default function Register() {
             setError('As senhas não coincidem')
             return
         }
-
         if (password.length < 6) {
             setError('A senha deve ter pelo menos 6 caracteres')
             return
@@ -62,7 +54,6 @@ export default function Register() {
         setLoading(true)
 
         try {
-            // 1. Capture UTMs from URL
             const utmParams = {
                 utm_source: searchParams.get('utm_source') || '',
                 utm_medium: searchParams.get('utm_medium') || '',
@@ -71,30 +62,22 @@ export default function Register() {
                 utm_term: searchParams.get('utm_term') || ''
             }
 
-            // 2. SignUp
             const result = await signUp(email, password, name)
 
             if (result?.user?.id) {
                 const userId = result.user.id
-
-                // 3. Save UTMs to Profile (Async, non-blocking flow but important)
                 await supabase.from('profiles').update(utmParams).eq('id', userId)
 
-                // 4. Track 'lead_created' (Server-to-Server)
                 fetch('/api/track-event', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         event: 'lead_created',
                         userId: userId,
-                        payload: {
-                            email: email,
-                            ...utmParams
-                        }
+                        payload: { email: email, ...utmParams }
                     })
                 }).catch(err => console.error('Tracking Error:', err))
 
-                // 5. Activate Trial if needed
                 if (isTrial) {
                     const trialResult = await activateFreeTrial(userId)
                     if (trialResult?.success) {
@@ -102,7 +85,6 @@ export default function Register() {
                     }
                 }
             }
-
             navigate('/', { replace: true })
         } catch (err) {
             setError(err.message || 'Erro ao criar conta. Tente novamente.')
@@ -112,138 +94,95 @@ export default function Register() {
     }
 
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
-                {/* Back Button */}
+        <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden font-sans">
+            {/* CINEMATIC BACKGROUND */}
+            <div className="absolute inset-0 z-0">
+                <img
+                    src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=2525&auto=format&fit=crop"
+                    alt="Background"
+                    className="w-full h-full object-cover opacity-40"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-pink-900/40 mix-blend-multiply" />
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+            </div>
+
+            <div className="absolute top-6 left-6 z-20">
                 <button
                     onClick={() => navigate(-1)}
-                    className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                    className="flex items-center gap-2 text-white/70 hover:text-white transition-all hover:-translate-x-1"
                 >
                     <ArrowLeft className="w-5 h-5" />
-                    Voltar
+                    <span className="font-bold">Voltar</span>
                 </button>
+            </div>
 
-                {/* Register Card */}
-                <div className="bg-card border border-white/10 rounded-2xl p-8 shadow-2xl">
-                    {/* Trial Banner */}
+            {/* GLASS CARD */}
+            <div className="relative z-10 w-full max-w-md">
+                <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-10 shadow-2xl">
+
                     {isTrial && (
-                        <div className="mb-6 bg-green-500/20 border border-green-500/50 rounded-xl p-4 text-center">
-                            <p className="text-green-400 font-bold text-lg mb-1">🎁 Teste Gratuito de 10 Minutos</p>
-                            <p className="text-sm text-gray-300">Crie sua conta para começar a assistir agora!</p>
+                        <div className="mb-6 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-top-4 fade-in duration-700">
+                            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                                <Sparkles className="w-5 h-5 text-emerald-400" />
+                            </div>
+                            <div>
+                                <p className="text-emerald-400 font-bold text-sm">Presente Ativado</p>
+                                <p className="text-emerald-200/80 text-xs">Acesso grátis liberado após cadastro.</p>
+                            </div>
                         </div>
                     )}
 
-                    <div className="text-center mb-8">
-                        <h1 className="text-3xl font-black text-white mb-2">Criar Conta</h1>
-                        <p className="text-gray-400">
-                            {isTrial ? 'Preencha seus dados para iniciar o teste' : 'Cadastre-se grátis e comece a assistir'}
-                        </p>
+                    <div className="mb-8">
+                        <h1 className="text-3xl font-black text-white tracking-tight mb-2">Crie sua Conta</h1>
+                        <p className="text-gray-400 text-sm">Comece a assistir os melhores doramas hoje mesmo.</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Name Input */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-300 mb-2">
-                                Nome Completo
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    required
-                                    className="w-full bg-background border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="Seu nome"
-                                />
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* INPUTS */}
+                        {[
+                            { label: 'Nome', icon: User, value: name, set: setName, type: 'text', placeholder: 'Seu nome' },
+                            { label: 'Email', icon: Mail, value: email, set: setEmail, type: 'email', placeholder: 'seu@email.com' },
+                            { label: 'Senha', icon: Lock, value: password, set: setPassword, type: 'password', placeholder: 'Mínimo 6 dígitos' },
+                            { label: 'Confirmar', icon: Lock, value: confirmPassword, set: setConfirmPassword, type: 'password', placeholder: 'Repita a senha' }
+                        ].map((field, idx) => (
+                            <div key={idx} className="space-y-1">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">{field.label}</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <field.icon className="h-5 w-5 text-gray-500 group-focus-within:text-pink-500 transition-colors" />
+                                    </div>
+                                    <input
+                                        type={field.type}
+                                        value={field.value}
+                                        onChange={(e) => field.set(e.target.value)}
+                                        required
+                                        className="w-full bg-white/5 border border-white/10 text-white rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:border-pink-500/50 focus:ring-4 focus:ring-pink-500/10 transition-all placeholder:text-gray-600 sm:text-sm"
+                                        placeholder={field.placeholder}
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        ))}
 
-                        {/* Email Input */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-300 mb-2">
-                                Email
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                    className="w-full bg-background border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="seu@email.com"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Password Input */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-300 mb-2">
-                                Senha
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    minLength={6}
-                                    className="w-full bg-background border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="Mínimo 6 caracteres"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Confirm Password Input */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-300 mb-2">
-                                Confirmar Senha
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                                <input
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    required
-                                    className="w-full bg-background border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="Digite a senha novamente"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Error Message */}
                         {error && (
-                            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-sm">
+                            <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-3 text-red-200 text-sm font-medium animate-pulse">
                                 {error}
                             </div>
                         )}
 
-                        {/* Submit Button */}
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+                            className="w-full mt-4 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-900/30 transform transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
                         >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Criando conta...
-                                </>
-                            ) : (
-                                'Criar Conta'
-                            )}
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Finalizar Cadastro'}
                         </button>
                     </form>
 
-                    {/* Login Link */}
-                    <div className="mt-6 text-center">
-                        <p className="text-gray-400">
-                            Já tem uma conta?{' '}
-                            <Link to="/login" className="text-primary font-bold hover:underline">
-                                Faça login
+                    <div className="mt-8 text-center">
+                        <p className="text-gray-400 text-sm">
+                            Já é membro?{' '}
+                            <Link to="/login" className="text-white font-bold hover:text-pink-400 transition-colors">
+                                Fazer Login
                             </Link>
                         </p>
                     </div>

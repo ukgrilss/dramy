@@ -40,6 +40,8 @@ import Integrations from './pages/admin/Integrations'
 
 import { useContentProtection } from './hooks/useContentProtection'
 
+import MobileBottomNav from './components/MobileBottomNav'
+
 function App() {
     useContentProtection() // 🛡️ ATIVA BLOQUEIO DE CÓPIA/DOWNLOAD
 
@@ -48,18 +50,15 @@ function App() {
             <TrialTimer />
             <Routes>
                 {/* ========================================
-                    ÁREA PÚBLICA (Marketing/Vendas)
-                ======================================== */}
-
-                <Route path="/vendas" element={<LandingPage />} />
-                <Route path="/planos" element={<PlansPage />} />
-                <Route path="/watch/:id" element={<Watch />} />
-
-                {/* ========================================
-                    AUTENTICAÇÃO
+                    ÁREA PÚBLICA & AUTH
                 ======================================== */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/vendas" element={<LandingPage />} />
+                <Route path="/planos" element={<PlansPage />} />
+
+                {/* Watch Player (Direct Access) */}
+                <Route path="/watch/:id" element={<Watch />} />
 
                 {/* ========================================
                     APP (Área Logada - Plataforma)
@@ -67,41 +66,42 @@ function App() {
                 ======================================== */}
                 <Route path="/" element={<AppLayout />}>
                     <Route index element={<AppHome />} />
-                    <Route path="title/:id" element={<TitleDetails />} />
+                    <Route path="filmes" element={<MoviesList />} />
+                    <Route path="series" element={<SeriesList />} />
                     <Route path="conteudos" element={<ContentList />} />
-                    <Route path="conteudos/filmes" element={<MoviesList />} />
-                    <Route path="conteudos/series" element={<SeriesList />} />
-                    <Route path="conteudos/:id" element={<ContentDetail />} />
-                    <Route path="minha-lista" element={<MyList />} />
-                    <Route path="perfil" element={<Profile />} />
+
+                    <Route path="title/:id" element={<TitleDetails />} />
+
+                    {/* Mapeamento conforme MobileBottomNav */}
+                    {/* "Minha Lista" aponta para /perfil */}
+                    <Route path="perfil" element={<MyList />} />
+                    {/* "Conta" aponta para /plano */}
                     <Route path="plano" element={<UserPlan />} />
+
+                    <Route path="conta" element={<Profile />} />
                 </Route>
 
                 {/* ========================================
-                    ADMIN (Painel Administrativo)
+                    ÁREA ADMINISTRATIVA
                 ======================================== */}
                 <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<Dashboard />} />
-                    <Route path="analytics" element={<Analytics />} />
-                    {/* Map "series" to ContentManagement for now, or rename ContentManagement */}
-                    <Route path="series" element={<ContentManagement />} />
-                    {/* <Route path="categories" element={<CategoryManagement />} /> */}
-                    <Route path="users" element={<UserManagement />} />
-                    <Route path="integrations" element={<Integrations />} />
-                    <Route path="suggestions" element={<Suggestions />} />
-                    {/* Map "plans" to SubscriptionManagement */}
-                    <Route path="plans" element={<SubscriptionManagement />} />
-
-                    {/* Keep legacy routes just in case, or alias them */}
-                    <Route path="content" element={<ContentManagement />} />
-                    <Route path="subscriptions" element={<SubscriptionManagement />} />
+                    <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="conteudo" element={<ContentManagement />} />
+                    <Route path="usuarios" element={<UserManagement />} />
+                    <Route path="assinaturas" element={<SubscriptionManagement />} />
                     <Route path="banners" element={<BannerManagement />} />
-                    <Route path="settings" element={<Settings />} />
+                    <Route path="categorias" element={<CategoryManagement />} />
+                    <Route path="configuracoes" element={<Settings />} />
+                    <Route path="analytics" element={<Analytics />} />
+                    <Route path="sugestoes" element={<Suggestions />} />
+                    <Route path="integracoes" element={<Integrations />} />
                 </Route>
 
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <MobileBottomNav />
             <Toaster position="top-right" richColors />
         </AuthProvider >
     )

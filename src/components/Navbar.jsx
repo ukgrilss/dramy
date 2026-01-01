@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Clapperboard, Search, Menu, X, User, LogOut, Settings, CreditCard } from 'lucide-react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Clapperboard, Search, Menu, X, User, LogOut, Settings, CreditCard, ChevronRight, Play } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import TrialTimer from './TrialTimer'
 
@@ -9,6 +9,7 @@ export default function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const { user, userRole, signOut } = useAuth()
     const navigate = useNavigate()
+    const location = useLocation()
 
     // Temporary fix: Explicitly allow admin emails
     const isAdmin = userRole === 'admin' || user?.email === 'admin@cinefy.com' || user?.email === 'admin@dramy.com'
@@ -24,162 +25,100 @@ export default function Navbar() {
     const handleSignOut = async () => {
         await signOut()
         navigate('/')
+        setIsMobileMenuOpen(false)
     }
 
+    const isActive = (path) => location.pathname === path
+
     return (
-        <nav className={`fixed top-0 z-50 w-full transition-all duration-300 ${isScrolled ? 'bg-black/90 backdrop-blur-md border-b border-white/5' : 'bg-transparent'}`}>
-            <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
-                {/* Logo */}
-                <Link to="/" className="flex items-center gap-2 text-2xl font-black tracking-tight text-white hover:text-primary transition-colors">
-                    <Clapperboard className="h-8 w-8 text-primary" />
-                    <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-                        Dramy
-                    </span>
-                </Link>
-
-                {/* Trial Timer */}
-                <TrialTimer />
-
-                {/* Desktop Navigation */}
-                <div className="hidden md:flex items-center gap-8">
-                    <Link to="/" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">Início</Link>
-
-                    {/* Auth Buttons */}
-                    {user ? (
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm text-gray-400">Olá, {user.user_metadata?.name || user.email}</span>
-
-                            {/* Added Profile/Plan Links for Desktop too, just in case */}
-                            <Link to="/perfil" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">Perfil</Link>
-                            <Link to="/plano" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">Plano</Link>
-
-
-                            {/* Admin Panel Link - Only for admins */}
-                            {isAdmin && (
-                                <Link
-                                    to="/admin"
-                                    className="flex items-center gap-2 bg-primary/20 hover:bg-primary/30 text-primary px-4 py-2 rounded-lg transition-all border border-primary/30"
-                                >
-                                    <Settings className="w-4 h-4" />
-                                    Admin
-                                </Link>
-                            )}
-
-                            <button
-                                onClick={handleSignOut}
-                                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-all border border-white/10"
-                            >
-                                <LogOut className="w-4 h-4" />
-                                Sair
-                            </button>
+        <>
+            <nav className={`fixed top-0 z-50 w-full transition-all duration-300 ${isScrolled ? 'bg-black/80 backdrop-blur-xl border-b border-white/5' : 'bg-gradient-to-b from-black/80 to-transparent'}`}>
+                <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-8">
+                    {/* Logo */}
+                    <Link to="/" className="flex items-center gap-2 group">
+                        <div className="relative">
+                            <div className="absolute -inset-2 bg-pink-500/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <Clapperboard className="h-8 w-8 text-primary relative z-10" />
                         </div>
-                    ) : (
-                        <Link
-                            to="/login"
-                            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg font-bold transition-all transform hover:scale-105"
-                        >
-                            <User className="w-4 h-4" />
-                            Entrar
-                        </Link>
-                    )}
-                </div>
+                        <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent group-hover:from-primary group-hover:to-purple-400 transition-all duration-300">
+                            Dramy
+                        </span>
+                    </Link>
 
-                {/* Actions */}
-                <div className="hidden md:flex items-center gap-4">
-                    <button className="p-2 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-all">
-                        <Search className="h-5 w-5" />
-                    </button>
-                </div>
+                    {/* Desktop Navigation */}
+                    <div className="hidden md:flex items-center gap-8">
+                        <Link to="/" className={`text-sm font-bold transition-colors ${isActive('/') ? 'text-white' : 'text-gray-400 hover:text-white'}`}>Início</Link>
+                        {user && (
+                            <>
+                                <Link to="/perfil" className={`text-sm font-bold transition-colors ${isActive('/perfil') ? 'text-white' : 'text-gray-400 hover:text-white'}`}>Minha Lista</Link>
+                                <TrialTimer />
+                            </>
+                        )}
+                    </div>
 
-                {/* Mobile Menu Button */}
-                <button
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="md:hidden p-2 text-white hover:text-primary transition-colors"
-                >
-                    {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                </button>
-            </div>
+                    {/* Actions & Profile (Desktop) */}
+                    <div className="hidden md:flex items-center gap-6">
+                        <button className="text-gray-300 hover:text-white transition-colors">
+                            <Search className="h-5 w-5" />
+                        </button>
 
-            {/* Mobile Menu Overlay */}
-            {isMobileMenuOpen && (
-                <div className="fixed top-16 left-0 right-0 bottom-0 bg-black/95 backdrop-blur-xl border-t border-white/10 p-4 flex flex-col gap-4 md:hidden overflow-y-auto animate-in fade-in slide-in-from-top-4">
-                    <Link to="/" className="block p-3 rounded-lg hover:bg-white/5 text-gray-200 font-bold" onClick={() => setIsMobileMenuOpen(false)}>Início</Link>
-
-                    {user ? (
-                        <>
-                            {/* User Info */}
-                            <div className="p-3 bg-white/5 rounded-lg">
-                                <p className="text-sm text-gray-400">Logado como:</p>
-                                <p className="text-white font-medium truncate">{user.user_metadata?.name || user.email}</p>
-                            </div>
-
-                            <Link
-                                to="/"
-                                className="flex items-center gap-3 p-3 rounded-lg bg-white/5 text-white hover:bg-white/10"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                <Clapperboard className="w-5 h-5 text-primary" />
-                                Acessar Plataforma
-                            </Link>
-
-                            <Link
-                                to="/perfil"
-                                className="flex items-center gap-3 p-3 rounded-lg text-gray-300 hover:bg-white/5"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                <User className="w-5 h-5" />
-                                Minha Conta
-                            </Link>
-
-                            <Link
-                                to="/plano"
-                                className="flex items-center gap-3 p-3 rounded-lg text-gray-300 hover:bg-white/5"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                <CreditCard className="w-5 h-5" />
-                                Meu Plano
-                            </Link>
-
-                            <div className="h-px bg-white/10 my-2"></div>
-
-                            {/* Admin Button - Only for admins */}
-                            {isAdmin && (
-                                <Link
-                                    to="/admin"
-                                    className="flex items-center justify-center gap-2 w-full p-3 rounded-lg bg-primary/20 border border-primary/50 text-primary font-bold hover:bg-primary hover:text-white transition-all"
-                                    onClick={() => setIsMobileMenuOpen(false)}
+                        {user ? (
+                            <div className="flex items-center gap-4 pl-6 border-l border-white/10">
+                                <div className="text-right hidden lg:block">
+                                    <p className="text-xs text-gray-400">Logado como</p>
+                                    <p className="text-sm font-bold text-white truncate max-w-[150px]">{user.user_metadata?.name || 'Assinante'}</p>
+                                </div>
+                                <div className="relative group">
+                                    <Link to="/perfil">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center overflow-hidden hover:border-primary/50 transition-colors">
+                                            <User className="h-5 w-5 text-gray-400 group-hover:text-white" />
+                                        </div>
+                                    </Link>
+                                    {/* Dropdown could go here */}
+                                </div>
+                                <button
+                                    onClick={handleSignOut}
+                                    className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                                    title="Sair"
                                 >
-                                    <Settings className="w-5 h-5" />
-                                    Painel Admin
-                                </Link>
-                            )}
-
-                            {/* Logout Button */}
-                            <button
-                                onClick={() => {
-                                    setIsMobileMenuOpen(false)
-                                    handleSignOut()
-                                }}
-                                className="flex items-center justify-center gap-2 w-full p-3 rounded-lg bg-white/10 text-white font-bold hover:bg-white/20 transition-all"
-                            >
-                                <LogOut className="h-4 w-4" /> Sair
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <div className="h-px bg-white/10 my-2"></div>
+                                    <LogOut className="w-5 h-5" />
+                                </button>
+                            </div>
+                        ) : (
                             <Link
                                 to="/login"
-                                className="flex items-center justify-center gap-2 w-full p-3 rounded-lg bg-primary text-white font-bold"
-                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="bg-white/10 hover:bg-white/20 text-white px-6 py-2.5 rounded-full font-bold text-sm transition-all hover:scale-105 border border-white/10"
                             >
-                                <User className="h-4 w-4" /> Entrar
+                                Entrar
                             </Link>
-                        </>
-                    )}
+                        )}
+                    </div>
+
                 </div>
-            )
-            }
-        </nav >
+            </nav>
+
+        </>
+    )
+}
+
+// Helper Component for Sidebar Links
+function DrawerLink({ to, icon: Icon, label, onClick, active, highlight }) {
+    return (
+        <Link
+            to={to}
+            onClick={onClick}
+            className={`flex items-center justify-between p-4 rounded-xl transition-all group ${active
+                ? 'bg-white/10 text-white border border-white/10'
+                : highlight
+                    ? 'bg-primary/10 text-primary border border-primary/20'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+        >
+            <div className="flex items-center gap-3">
+                <Icon className={`w-5 h-5 ${active ? 'text-primary' : highlight ? 'text-primary' : 'text-gray-500 group-hover:text-white'}`} />
+                <span className="font-medium">{label}</span>
+            </div>
+            <ChevronRight className={`w-4 h-4 text-gray-600 group-hover:text-white ${active ? 'text-white' : ''}`} />
+        </Link>
     )
 }
