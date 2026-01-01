@@ -7,7 +7,7 @@ import { generateFingerprint, getUserAgent } from '@/lib/fingerprint'
 
 export default function Register() {
     const navigate = useNavigate()
-    const { signUp } = useAuth()
+    const { signUp, refreshProfile } = useAuth()
     const [searchParams] = useSearchParams()
     const isTrialParam = searchParams.get('trial') === 'true'
 
@@ -25,7 +25,7 @@ export default function Register() {
         try {
             const fingerprint = await generateFingerprint()
             const userAgent = getUserAgent()
-            const { data, error } = await supabase.rpc('register_trial_access', {
+            const { data, error } = await supabase.rpc('register_trial_access_v2', {
                 p_fingerprint: fingerprint,
                 p_user_agent: userAgent,
                 p_user_id: userId
@@ -82,6 +82,9 @@ export default function Register() {
                     const trialResult = await activateFreeTrial(userId)
                     if (trialResult?.success) {
                         localStorage.setItem('dramy_trial_used', 'true')
+                        // FIX: Force profile refresh to get the updated trial balance
+                        await new Promise(r => setTimeout(r, 500)) // Small delay for DB propagation
+                        await refreshProfile()
                     }
                 }
             }
