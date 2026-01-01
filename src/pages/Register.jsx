@@ -12,7 +12,8 @@ export default function Register() {
     const isTrialParam = searchParams.get('trial') === 'true'
 
     const hasUsedTrial = localStorage.getItem('dramy_trial_used') === 'true'
-    const isTrial = isTrialParam && !hasUsedTrial
+    // FIX: Let backend decide (V3/Secure logic), don't block on client side
+    const isTrial = isTrialParam
 
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
@@ -25,7 +26,7 @@ export default function Register() {
         try {
             const fingerprint = await generateFingerprint()
             const userAgent = getUserAgent()
-            const { data, error } = await supabase.rpc('register_trial_access_v2', {
+            const { data, error } = await supabase.rpc('register_trial_access_v3', {
                 p_fingerprint: fingerprint,
                 p_user_agent: userAgent,
                 p_user_id: userId

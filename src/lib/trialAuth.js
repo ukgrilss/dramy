@@ -100,7 +100,7 @@ export const startFreeTrial = async () => {
         // 4. Register trial access
         // 4. Register trial access
         const { data: trialData, error: trialError } = await supabase
-            .rpc('register_trial_access_v2', {
+            .rpc('register_trial_access_v3', {
                 p_ip_address: ip,
                 p_fingerprint: fingerprint,
                 p_user_agent: userAgent,
