@@ -2,6 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Clapperboard, Home, Film, Tv, User, CreditCard, LogOut, Settings, Menu, X, Search } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import TrialTimer from '@/components/TrialTimer' // FIX: Import Timer
 
 export default function AppNavbar() {
     const { user, signOut } = useAuth()
@@ -58,6 +59,8 @@ export default function AppNavbar() {
                 transition: 'transform 0.1s ease-out'
             }}
         >
+            <TrialTimer /> {/* FIX: Render Timer Component */}
+
             {/* Animated gradient overlay - breathing effect */}
             <div
                 className="absolute inset-0 opacity-30 pointer-events-none"

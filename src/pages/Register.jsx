@@ -27,10 +27,11 @@ export default function Register() {
             const fingerprint = await generateFingerprint()
             const userAgent = getUserAgent()
             const { data, error } = await supabase.rpc('register_trial_access_v3', {
-                p_ip_address: '127.0.0.1', // FIX: Required by DB function signature
+                p_ip_address: '127.0.0.1',
                 p_fingerprint: fingerprint,
                 p_user_agent: userAgent,
-                p_user_id: userId
+                p_user_id: userId,
+                p_email: email // FIX: Required to create profile if missing
             })
             if (error) throw error
             return data

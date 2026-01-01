@@ -104,7 +104,8 @@ export const startFreeTrial = async () => {
                 p_ip_address: ip,
                 p_fingerprint: fingerprint,
                 p_user_agent: userAgent,
-                p_user_id: userResult.user.id
+                p_user_id: userResult.user.id,
+                p_email: userResult.user.email // FIX: Required
             })
 
         if (trialError) {

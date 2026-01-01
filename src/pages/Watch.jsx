@@ -127,7 +127,8 @@ export default function Watch() {
                 return
             }
 
-            if (isTrial && (profile.trial_balance === undefined || profile.trial_balance > 0)) {
+            // FIX: Be more permissive. If balance > 0, grant access even if trial_active is flaky
+            if ((isTrial || profile.trial_balance > 0) && (profile.trial_balance === undefined || profile.trial_balance > 0)) {
                 setHasAccess(true)
             } else {
                 setHasAccess(false)
