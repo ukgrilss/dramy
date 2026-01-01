@@ -340,13 +340,20 @@ export default function Watch() {
                 ) : (
                     /* UNLOCKED PLAYER */
                     secureUrl ? (
-                        <VideoPlayer
-                            src={secureUrl}
-                            title={movie.titulo}
-                            poster={movie.capa}
-                            initialTime={initialTime}
-                            onProgress={handleProgress}
-                        />
+                        <>
+                            <div className="absolute top-8 right-8 z-[60] pointer-events-none select-none opacity-50">
+                                <span className="text-white/30 text-xl font-bold font-mono tracking-widest uppercase" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                                    dramio
+                                </span>
+                            </div>
+                            <VideoPlayer
+                                src={secureUrl}
+                                title={movie.titulo}
+                                poster={movie.capa}
+                                initialTime={initialTime}
+                                onProgress={handleProgress}
+                            />
+                        </>
                     ) : (
                         <div className="flex h-full items-center justify-center flex-col">
                             <Loader2 className="h-8 w-8 animate-spin text-primary mr-2 mb-4" />

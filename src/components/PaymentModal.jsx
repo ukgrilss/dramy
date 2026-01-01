@@ -173,6 +173,17 @@ export default function PaymentModal({ plan, onClose }) {
         }
     }
 
+    // --- DEBUGGING ---
+    useEffect(() => {
+        if (pixData) {
+            console.log("PIX DATA RECEIVED:", pixData)
+            if (!pixData.qr_code) {
+                alert("DEBUG: pixData recebido mas qr_code vazio! " + JSON.stringify(pixData))
+            }
+        }
+    }, [pixData])
+    // -----------------
+
     const handleCopy = () => {
         if (pixData?.qr_code) {
             navigator.clipboard.writeText(pixData.qr_code)
