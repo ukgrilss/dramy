@@ -185,73 +185,39 @@ export default function AppNavbar() {
                     )}
                 </div>
 
-                {/* Mobile Search & Menu Actions - HIDDEN (Replaced by Bottom Nav) */}
-                <div className="hidden">
-                    <button
-                        onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-                        className="text-white hover:text-primary transition-colors"
-                    >
-                        {isMobileSearchOpen ? <X className="h-6 w-6" /> : <Search className="h-6 w-6" />}
-                    </button>
+                {/* Mobile Search & Menu Actions */}
+                <div className="flex flex-1 items-center justify-end md:hidden ml-4">
+                    {/* Mobile Inline Search Bar - Expanded */}
+                    <form onSubmit={handleSearch} className="w-full max-w-[400px] relative flex items-center">
+                        <input
+                            type="text"
+                            placeholder="Buscar..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-white/10 border border-white/10 rounded-full py-2 pl-4 pr-10 text-sm text-white focus:outline-none focus:border-primary/50 transition-all placeholder:text-gray-400"
+                        />
+                        <button
+                            type="submit"
+                            className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-white transition-colors"
+                        >
+                            <Search className="w-4 h-4" />
+                        </button>
+                    </form>
 
+                    {/* Menu Button - HIDDEN as requested */}
                     <button
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="text-white hover:text-primary transition-colors"
+                        className="hidden text-white hover:text-primary transition-colors ml-4"
                     >
                         {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>
                 </div>
             </div >
 
-            {/* Mobile Search Bar (Expandable) */}
-            {
-                isMobileSearchOpen && (
-                    <div className="md:hidden bg-black/95 backdrop-blur-xl border-b border-white/10 p-4 animate-in slide-in-from-top-2">
-                        <form
-                            action="."
-                            onSubmit={(e) => {
-                                e.preventDefault()
-                                if (searchTerm.trim()) {
-                                    navigate(`/conteudos?q=${searchTerm}`)
-                                    setIsMobileSearchOpen(false)
-                                    document.activeElement?.blur()
-                                }
-                            }}
-                            className="relative flex items-center"
-                        >
-                            <input
-                                type="search"
-                                name="q"
-                                inputMode="search"
-                                placeholder="O que você quer assistir?"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                autoFocus
-                                className="w-full bg-white/10 border border-white/10 rounded-lg py-3 pl-12 pr-12 text-white placeholder:text-gray-400 focus:outline-none focus:border-primary focus:bg-white/20"
-                            />
-
-                            {/* Search Icon (Submit Trigger) */}
-                            <button
-                                type="submit"
-                                className="absolute left-0 top-0 h-full w-12 flex items-center justify-center text-gray-400 group-focus-within:text-primary transition-colors"
-                            >
-                                <Search className="w-5 h-5" />
-                            </button>
-
-                            {/* Close/Clear Button */}
-                            {searchTerm && (
-                                <button
-                                    type="button"
-                                    onClick={() => setSearchTerm('')}
-                                    className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-gray-400 hover:text-white"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            )}
-                        </form>
-                    </div>
-                )
-            }
+            {/* Mobile Search Bar (Expandable) - REMOVED (Replaced by Inline Input) */}
+            {/* {
+                isMobileSearchOpen && ( ... )
+            } */}
 
             {/* Mobile Menu */}
             {
