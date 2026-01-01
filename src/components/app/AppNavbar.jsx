@@ -185,8 +185,8 @@ export default function AppNavbar() {
                     )}
                 </div>
 
-                {/* Mobile Search & Menu Actions */}
-                <div className="flex items-center gap-4 md:hidden">
+                {/* Mobile Search & Menu Actions - HIDDEN (Replaced by Bottom Nav) */}
+                <div className="hidden">
                     <button
                         onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
                         className="text-white hover:text-primary transition-colors"

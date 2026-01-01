@@ -158,7 +158,7 @@ export default function AppHome() {
             {/* HERO SECTION */}
             <Hero banners={banners} movies={movies} history={history} />
 
-            <div className="container mx-auto px-2 pt-4 pb-0 -mt-16 relative z-30">
+            <div className="container mx-auto px-2 pt-4 pb-24 md:pb-8 -mt-16 relative z-30">
 
                 {/* Movies Grid / Sections - High Density */}
                 <div className="space-y-0">
@@ -408,50 +408,7 @@ export default function AppHome() {
                                 </div>
                             </div>
 
-                            {/* FINAL FOOTER SECTION - Enhanced */}
-                            <div className="relative mt-0 pt-16 pb-0 mb-0 overflow-hidden">
-                                {/* Gradient Background */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent"></div>
-                                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent"></div>
 
-                                {/* Content Stats */}
-                                <div className="relative z-10 flex flex-col items-center justify-center space-y-0 px-4">
-                                    {/* Stats Row */}
-                                    <div className="flex items-center gap-8 md:gap-16 text-center mb-8">
-                                        <div className="flex flex-col">
-                                            <span className="text-3xl md:text-5xl font-black text-white">+10 mil</span>
-                                            <span className="text-xs md:text-sm text-gray-400 font-medium mt-1">Títulos</span>
-                                        </div>
-                                        <div className="h-12 w-px bg-white/10"></div>
-                                        <div className="flex flex-col">
-                                            <span className="text-3xl md:text-5xl font-black text-white">HD</span>
-                                            <span className="text-xs md:text-sm text-gray-400 font-medium mt-1">Qualidade</span>
-                                        </div>
-                                        <div className="h-12 w-px bg-white/10"></div>
-                                        <div className="flex flex-col">
-                                            <span className="text-3xl md:text-5xl font-black text-white">24/7</span>
-                                            <span className="text-xs md:text-sm text-gray-400 font-medium mt-1">Disponível</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Divider */}
-                                    <div className="w-full max-w-md h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mb-8"></div>
-
-                                    {/* CTA Section */}
-                                    <div className="flex flex-col items-center space-y-4 pb-0">
-                                        <p className="text-gray-400 text-sm font-medium">Não encontrou o que procurava?</p>
-                                        <button
-                                            onClick={() => navigate('/conteudos')}
-                                            className="group relative px-8 py-4 rounded-full bg-gradient-to-r from-primary/20 to-primary/10 hover:from-primary/30 hover:to-primary/20 border border-primary/20 hover:border-primary/40 transition-all duration-300 shadow-lg shadow-primary/5 hover:shadow-primary/10"
-                                        >
-                                            <span className="text-white font-bold text-base tracking-wide flex items-center gap-2">
-                                                Explorar catálogo completo
-                                                <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-                                            </span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
 
                         </div>
                     ) : (
