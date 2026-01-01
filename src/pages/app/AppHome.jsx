@@ -148,7 +148,37 @@ export default function AppHome() {
         window.scrollTo({ top: 500, behavior: 'smooth' })
     }
 
-    if (loading) return <div className="flex h-screen items-center justify-center text-primary animate-pulse w-full">Carregando Dramy...</div>
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-background text-white font-sans overflow-hidden">
+                {/* Skeleton Hero */}
+                <div className="w-full h-[60vh] md:h-[80vh] bg-gray-900/40 relative animate-pulse flex items-end">
+                    <div className="w-full p-6 md:p-12 pb-24 space-y-4 bg-gradient-to-t from-background to-transparent">
+                        <div className="h-4 w-24 bg-gray-800 rounded-full mb-4"></div>
+                        <div className="h-8 md:h-12 w-2/3 md:w-1/3 bg-gray-800 rounded-lg"></div>
+                        <div className="h-4 w-full md:w-1/2 bg-gray-800 rounded-lg"></div>
+                        <div className="flex gap-4 pt-4">
+                            <div className="h-12 w-32 bg-gray-800 rounded-lg"></div>
+                            <div className="h-12 w-12 bg-gray-800 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+                {/* Skeleton Rows */}
+                <div className="container mx-auto px-4 -mt-20 relative z-10 space-y-8">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="space-y-4">
+                            <div className="h-6 w-48 bg-gray-800/60 rounded animate-pulse"></div>
+                            <div className="flex gap-4 overflow-hidden">
+                                {[1, 2, 3, 4, 5, 6].map((j) => (
+                                    <div key={j} className="h-48 md:h-64 w-32 md:w-44 bg-gray-800/40 rounded-xl flex-shrink-0 animate-pulse"></div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-background text-white font-sans overflow-x-hidden relative">

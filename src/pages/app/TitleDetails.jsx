@@ -146,6 +146,29 @@ export default function TitleDetails() {
         }
     }
 
+    const handleShare = async () => {
+        if (!title) return
+
+        const shareData = {
+            title: title.title,
+            text: `Assista ${title.title} no Dramy!`,
+            url: window.location.href
+        }
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData)
+            } else {
+                await navigator.clipboard.writeText(window.location.href)
+                // Use a more subtle toast if possible, but for now alert is fine as per request context
+                // Or better, change the icon temporarily to Check
+                alert("Link copiado para a área de transferência!")
+            }
+        } catch (err) {
+            console.error("Error sharing:", err)
+        }
+    }
+
     if (loading) return <div className="h-screen bg-[#050505] flex items-center justify-center text-primary animate-pulse">Carregando...</div>
 
     if (!title) return <div className="h-screen bg-[#050505] flex items-center justify-center text-white">Título não encontrado.</div>
@@ -221,7 +244,10 @@ export default function TitleDetails() {
                         >
                             <Heart className={`w-5 h-5 transition-colors ${isInList ? 'fill-red-500 text-red-500' : 'group-hover:text-red-500'}`} />
                         </button>
-                        <button className="bg-white/10 hover:bg-white/20 text-white p-3.5 rounded-lg font-bold transition-all backdrop-blur-sm">
+                        <button
+                            onClick={handleShare}
+                            className="bg-white/10 hover:bg-white/20 text-white p-3.5 rounded-lg font-bold transition-all backdrop-blur-sm active:scale-95"
+                        >
                             <Share2 className="w-5 h-5" />
                         </button>
                     </div>
