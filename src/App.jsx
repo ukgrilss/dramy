@@ -12,6 +12,8 @@ import Watch from './pages/Watch'
 // Auth Pages
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword' // NEW
+import UpdatePassword from './pages/UpdatePassword' // NEW
 
 // App Pages (Logged In Area)
 import AppLayout from './components/app/AppLayout'
@@ -54,6 +56,8 @@ function App() {
                 ======================================== */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} /> {/* NEW */}
+                <Route path="/update-password" element={<UpdatePassword />} /> {/* NEW */}
                 <Route path="/vendas" element={<LandingPage />} />
                 <Route path="/planos" element={<PlansPage />} />
 

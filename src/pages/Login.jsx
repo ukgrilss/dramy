@@ -89,13 +89,12 @@ export default function Login() {
                         <div className="space-y-2">
                             <div className="flex justify-between items-center ml-1">
                                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Senha</label>
-                                <button
-                                    type="button"
-                                    onClick={() => alert('Recurso em desenvolvimento.')}
+                                <Link
+                                    to="/forgot-password"
                                     className="text-xs text-pink-400 hover:text-pink-300 transition-colors"
                                 >
                                     Esqueceu?
-                                </button>
+                                </Link>
                             </div>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
