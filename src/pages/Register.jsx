@@ -116,11 +116,11 @@ export default function Register() {
             <div className="w-full max-w-md">
                 {/* Back Button */}
                 <button
-                    onClick={() => navigate('/login')}
+                    onClick={() => navigate(-1)}
                     className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
                 >
                     <ArrowLeft className="w-5 h-5" />
-                    Voltar para login
+                    Voltar
                 </button>
 
                 {/* Register Card */}

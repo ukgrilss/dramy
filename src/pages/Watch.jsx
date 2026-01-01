@@ -271,7 +271,7 @@ export default function Watch() {
         return (
             <div className="flex h-screen flex-col items-center justify-center bg-black text-white">
                 <h2 className="text-xl font-bold mb-4">Título não encontrado</h2>
-                <button onClick={() => navigate('/')} className="text-primary hover:underline">Voltar</button>
+                <button onClick={() => navigate(-1)} className="text-primary hover:underline">Voltar</button>
             </div>
         )
     }
@@ -284,7 +284,7 @@ export default function Watch() {
             {/* Header */}
             <div className="absolute top-0 left-0 w-full p-6 flex items-center justify-between z-50 pointer-events-none">
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={() => navigate(-1)}
                     className="pointer-events-auto bg-black/40 backdrop-blur-md p-3 rounded-full hover:bg-pink-600/80 text-white border border-white/10 transition-all"
                 >
                     <ArrowLeft className="w-6 h-6" />

@@ -82,7 +82,7 @@ export default function LandingPage() {
                     {/* CTA Section */}
                     <div className="space-y-6">
                         <Link
-                            to="/register?trial=true"
+                            to={user ? "/planos" : "/register?trial=true"}
                             className="group relative inline-flex items-center justify-center bg-pink-500 hover:bg-pink-600 text-white text-xl md:text-2xl font-black py-6 px-12 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-[0_0_40px_-10px_rgba(236,72,153,0.5)]"
                         >
                             <span className="relative z-10 flex items-center gap-3">

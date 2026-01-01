@@ -21,18 +21,21 @@ export default function Home() {
     useEffect(() => {
         async function fetchData() {
             setLoading(true)
-            // Fetch Movies
-            const { data: moviesData } = await supabase
-                .from('filmes')
-                .select('*')
-                .limit(2000)
-                .order('created_at', { ascending: false })
+            // Parallel Fetching & Light Payload
+            const [moviesResult, bannersResult] = await Promise.all([
+                supabase
+                    .from('filmes')
+                    .select('id, titulo, capa, categoria, video_url, created_at, novo, destaque') // Select ONLY what is needed
+                    .limit(2000)
+                    .order('created_at', { ascending: false }),
+                supabase
+                    .from('banners')
+                    .select('*')
+                    .eq('ativo', true)
+            ])
 
-            // Fetch Banners (Raw)
-            const { data: bannersData, error: bannersError } = await supabase
-                .from('banners')
-                .select('*')
-                .eq('ativo', true)
+            const { data: moviesData } = moviesResult
+            const { data: bannersData, error: bannersError } = bannersResult
 
             if (bannersError) {
                 console.error('Error fetching banners:', bannersError)

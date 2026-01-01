@@ -137,10 +137,13 @@ export default function PlansPage() {
                             Dramy
                         </span>
                     </div>
-                    <Link to="/" className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-white transition-colors">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-white transition-colors"
+                    >
                         <ArrowLeft className="w-4 h-4" />
-                        Voltar ao Início
-                    </Link>
+                        Voltar
+                    </button>
                 </div>
             </nav>
 
