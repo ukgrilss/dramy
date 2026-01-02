@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { MessageCircle, Mail, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react'
@@ -10,10 +10,15 @@ export default function ForgotPassword() {
     const [success, setSuccess] = useState(false)
     const [error, setError] = useState(null)
 
+    const emailRef = useRef(null)
+
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if (!email) {
+        // FIX: Get value directly from input to support aggressive Autofill
+        const finalEmail = emailRef.current?.value || email
+
+        if (!finalEmail) {
             setError('Por favor, digite seu email.')
             return
         }
@@ -22,7 +27,7 @@ export default function ForgotPassword() {
         setError(null)
 
         try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            const { error } = await supabase.auth.resetPasswordForEmail(finalEmail, {
                 redirectTo: `${window.location.origin}/update-password`,
             })
 
@@ -99,6 +104,7 @@ export default function ForgotPassword() {
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
                                 <input
+                                    ref={emailRef}
                                     type="email"
                                     placeholder="seu@email.com"
                                     value={email}
