@@ -22,9 +22,16 @@ export const AuthProvider = ({ children }) => {
         supabase.auth.getSession().then(async ({ data: { session } }) => {
             setUser(session?.user ?? null)
             if (session?.user) {
-                const data = await fetchUserRole(session.user.id)
-                if (data) setProfile(data)
+                try {
+                    const data = await fetchUserRole(session.user.id)
+                    if (data) setProfile(data)
+                } catch (err) {
+                    console.error('Initial role fetch failed:', err)
+                }
             }
+            setLoading(false)
+        }).catch(err => {
+            console.error('Session check failed:', err)
             setLoading(false)
         })
 

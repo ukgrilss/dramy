@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Film, List, LogOut, Search, CreditCard, MessageSquare, BarChart3, Menu, X, Webhook } from 'lucide-react'
+import { LayoutDashboard, Users, Film, List, LogOut, Search, CreditCard, MessageSquare, BarChart3, Menu, X, Webhook, Settings } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
 const AdminLayout = () => {
@@ -11,23 +11,44 @@ const AdminLayout = () => {
     // Redirect immediately if not admin (Ghost Mode)
     // We check BOTH !loading AND userRole to ensure we don't redirect while still fetching the user
     if (!loading && userRole !== 'admin') {
-        return <Navigate to="/" replace />
+        return (
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-4 text-center">
+                <h1 className="text-3xl font-bold text-red-500 mb-4">ACESSO NEGADO 🚫</h1>
+                <p className="text-gray-400 mb-2">Você tentou acessar o painel administrativo.</p>
+                <div className="bg-red-900/20 border border-red-500/50 p-4 rounded-lg font-mono text-sm mb-6">
+                    Seu Cargo (Role): <span className="text-yellow-400 font-bold">{userRole || 'nenhum'}</span>
+                </div>
+                <Link to="/" className="bg-white text-black px-6 py-2 rounded-full font-bold hover:bg-gray-200 transition-colors">
+                    Voltar para Home
+                </Link>
+            </div>
+        )
     }
 
     // While loading auth state, show NOTHING (or a generic app loader, but user asked for 'invisible')
     // Showing nothing (null) prevents the "flash" of admin content before we know who the user is.
-    if (loading) return null
+    // While loading auth state, show a Loader instead of nothing
+    // While loading auth state, show a Loader instead of nothing
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#0f1014] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+            </div>
+        )
+    }
 
     // Navigation items matching the reference site
     const navItems = [
-        { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+        { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
-        { path: '/admin/series', icon: Film, label: 'Séries' },
-        // { path: '/admin/categories', icon: List, label: 'Categorias' }, // REMOVED
+        { path: '/admin/conteudo', icon: Film, label: 'Conteúdo' },
+        { path: '/admin/categorias', icon: List, label: 'Categorias' },
         { path: '/admin/integrations', icon: Webhook, label: 'Integrações' },
-        { path: '/admin/users', icon: Users, label: 'Usuários' },
-        { path: '/admin/suggestions', icon: MessageSquare, label: 'Sugestões' },
-        { path: '/admin/plans', icon: CreditCard, label: 'Config. Pagamento' },
+        { path: '/admin/usuarios', icon: Users, label: 'Usuários' },
+        { path: '/admin/sugestoes', icon: MessageSquare, label: 'Sugestões' },
+        { path: '/admin/assinaturas', icon: CreditCard, label: 'Assinaturas' },
+        { path: '/admin/banners', icon: LayoutDashboard, label: 'Banners' },
+        { path: '/admin/configuracoes', icon: Settings, label: 'Configurações' },
     ]
 
     return (
@@ -105,7 +126,7 @@ const AdminLayout = () => {
                 </div>
 
                 {/* Horizontal Navigation Tabs (Desktop) */}
-                <nav className="hidden md:flex items-center gap-1 border-b border-white/10 mb-8 overflow-x-auto pb-0 hide-scrollbar">
+                <nav className="hidden md:flex items-center gap-1 border-b border-white/10 mb-8 overflow-x-auto pb-0 scrollbar-hide">
                     {navItems.map((item) => {
                         const Icon = item.icon
                         const isActive = location.pathname === item.path
