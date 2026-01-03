@@ -1,5 +1,5 @@
--- FIX: RECREATE TRIAL FUNCTION V4 (ROBUST MODE)
--- This version handles "Trigger Lag" by creating the profile if it doesn't exist yet.
+-- FIX: RECREATE TRIAL FUNCTION V5 (ATOMIC UPSERT MODE)
+-- This uses ON CONFLICT to guarantee the update happens regardless of triggers.
 
 DROP FUNCTION IF EXISTS register_trial_access_v3;
 
@@ -14,25 +14,26 @@ RETURNS JSON
 SECURITY DEFINER
 AS $$
 DECLARE
-    v_rows_affected INT;
+    v_final_balance INT;
 BEGIN
-    -- 1. Try to UPDATE existing profile
-    UPDATE profiles 
+    -- ATOMIC UPSERT: Insert or Update in one atomic step
+    -- This beats any race condition with Triggers.
+    INSERT INTO profiles (id, email, trial_active, trial_balance, plan_name, subscription_active)
+    VALUES (p_user_id, p_email, true, 600, 'trial', false)
+    ON CONFLICT (id) DO UPDATE
     SET 
         trial_active = true,
         trial_balance = 600,
-        plan_name = 'trial'
-    WHERE id = p_user_id;
+        plan_name = 'trial';
 
-    GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
+    -- Verify the balance right after
+    SELECT trial_balance INTO v_final_balance FROM profiles WHERE id = p_user_id;
 
-    -- 2. If no row was updated (Profile not created yet?), INSERT it manually
-    IF v_rows_affected = 0 THEN
-        INSERT INTO profiles (id, email, trial_active, trial_balance, plan_name, subscription_active)
-        VALUES (p_user_id, p_email, true, 600, 'trial', false);
-    END IF;
-
-    RETURN json_build_object('success', true, 'message', 'Trial ativado com sucesso (Permissive Mode)!');
+    RETURN json_build_object(
+        'success', true, 
+        'message', 'Trial ativado com sucesso (UPSERT)!', 
+        'debug_balance', v_final_balance
+    );
 
 EXCEPTION WHEN OTHERS THEN
     RETURN json_build_object('success', false, 'message', 'Erro SQL: ' || SQLERRM);
@@ -42,3 +43,18 @@ $$ LANGUAGE plpgsql;
 GRANT EXECUTE ON FUNCTION register_trial_access_v3 TO authenticated;
 GRANT EXECUTE ON FUNCTION register_trial_access_v3 TO service_role;
 GRANT EXECUTE ON FUNCTION register_trial_access_v3 TO anon;
+
+-- ENSURE RLS PERSISTS
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+CREATE POLICY "Users can view own profile" ON profiles
+    FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+CREATE POLICY "Users can update own profile" ON profiles
+    FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+CREATE POLICY "Users can insert own profile" ON profiles
+    FOR INSERT WITH CHECK (auth.uid() = id);

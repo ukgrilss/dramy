@@ -76,7 +76,10 @@ export default function Register() {
                 utm_term: searchParams.get('utm_term') || ''
             }
 
-            const result = await signUp(email, password, name)
+            // Pass trial flag to Metadata so the DB Trigger can pick it up
+            const metaData = isTrial ? { trial_active: true, trial_started_at: new Date().toISOString() } : {}
+
+            const result = await signUp(email, password, name, metaData)
 
             if (result?.user?.id) {
                 const userId = result.user.id

@@ -62,42 +62,39 @@ export const AuthProvider = ({ children }) => {
                 localStorage.setItem('userRole', metadataRole)
             }
 
-            // ALWAYS fetch SECURE RPC to get subscription status (profile data)
-            // We cannot rely only on metadata because we need 'subscription_active'
-            const { data, error } = await supabase
-                .rpc('get_my_profile_secure')
+            // ALWAYS fetch profile directly to ensure we get all fields (including trial_active)
+            // The RPC 'get_my_profile_secure' might be missing these fields, causing the timer to disappear.
+
+            const { data: directData, error: directError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .maybeSingle()
+
+            if (!directError && directData) {
+                // If table fetch succeeds, use it!
+                if (directData.role) {
+                    setUserRole(directData.role)
+                    localStorage.setItem('userRole', directData.role)
+                }
+                return directData
+            }
+
+            // Fallback to RPC only if direct fetch fails (e.g. RLS issues)
+            const { data, error } = await supabase.rpc('get_my_profile_secure')
 
             if (!error && data) {
-                // RPC returning SETOF profiles returns an array.
                 const profileData = Array.isArray(data) ? data[0] : data
-
-                // If RPC returns role, it overrides metadata or confirms it
                 if (profileData?.role) {
                     setUserRole(profileData.role)
                     localStorage.setItem('userRole', profileData.role)
                 }
-
-                // Expose profile data to context
                 return profileData
-            } else {
-                console.warn('RPC fetch failed, trying direct table fallback...', error)
-
-                // Backup: Direct table access (if RPC is not set up)
-                const { data: directData, error: directError } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', userId)
-                    .maybeSingle()
-
-                if (!directError && directData) {
-                    setUserRole(directData.role)
-                    return directData
-                }
             }
 
-            // If we reached here, DB fetch failed but maybe we have metadata role
+            // Return minimal profile if all else fails
             if (metadataRole) {
-                return { role: metadataRole, id: userId } // Return minimal profile
+                return { role: metadataRole, id: userId }
             }
 
             // ❌ REMOVED: localStorage fallback (CVE-2025-DRAMY-004)
@@ -112,13 +109,14 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
-    const signUp = async (email, password, name) => {
+    const signUp = async (email, password, name, additionalMeta = {}) => {
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
                 data: {
-                    name: name
+                    name: name,
+                    ...additionalMeta
                 }
             }
         })
