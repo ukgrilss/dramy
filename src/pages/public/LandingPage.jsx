@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom'
 import { Check, Shield, Zap, Play } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import TrialPromoPopup from '@/components/TrialPromoPopup'
 
 export default function LandingPage() {
     const { user } = useAuth()
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-pink-500 selection:text-white">
+            <TrialPromoPopup />
             {/* Header / Nav */}
             <nav className="fixed top-0 w-full z-50 bg-[#0a0a0a]/80 backdrop-blur-lg border-b border-white/5">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">

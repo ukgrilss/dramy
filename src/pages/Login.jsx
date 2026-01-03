@@ -3,6 +3,8 @@ import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { ArrowLeft, Mail, Lock, Loader2, Play } from 'lucide-react'
 
+import TrialPromoPopup from '@/components/TrialPromoPopup'
+
 export default function Login() {
     const navigate = useNavigate()
     const location = useLocation()

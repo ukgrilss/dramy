@@ -35,10 +35,11 @@ export default function Register() {
             })
             if (error) throw error
             return data
+            if (error) throw error
+            return data
         } catch (error) {
             console.error('Error activating trial:', error)
-            alert('ERRO TÉCNICO NO TESTE GRÁTIS: ' + error.message) // VISIBLE ALERT
-            return null
+            return { success: false, message: error.message }
         }
     }
 
@@ -92,24 +93,31 @@ export default function Register() {
                 }).catch(err => console.error('Tracking Error:', err))
 
                 if (isTrial) {
-                    alert('⏳ Ativando seus 10 minutos grátis... Aguarde!') // VISIBLE ALERT
+                    // Try to activate trial
                     const trialResult = await activateFreeTrial(userId)
 
                     if (trialResult?.success) {
-                        alert('✅ SUCESSO! 10 Minutos Liberados!\n\nVocê será redirecionado.')
+                        // Success!
                         localStorage.setItem('dramy_trial_used', 'true')
-
-                        await new Promise(r => setTimeout(r, 1000))
                         await refreshProfile()
+                        // Proceed to home
+                        navigate('/', { replace: true })
                     } else {
-                        alert('❌ ERRO NO TESTE GRÁTIS:\n' + (trialResult?.message || 'Erro desconhecido'))
+                        // Trial Failed - Show error to user
+                        console.error("Trial activation failed:", trialResult)
+                        setError(`Conta criada, mas erro ao ativar teste: ${trialResult?.message || 'Erro desconhecido'}`)
+                        // Reset loading so they can see the error
+                        setLoading(false)
+                        return // Stop here, don't navigate
                     }
+                } else {
+                    // Not trial, just redirect
+                    navigate('/', { replace: true })
                 }
             }
-            navigate('/', { replace: true })
         } catch (err) {
             console.error(err)
-            alert('Erro no cadastro: ' + err.message)
+            // alert('Erro no cadastro: ' + err.message) // REMOVED
             setError(err.message || 'Erro ao criar conta. Tente novamente.')
         } finally {
             setLoading(false)

@@ -23,6 +23,25 @@ export default {
             },
             backgroundImage: {
                 'gradient-dark': 'linear-gradient(180deg, #050505, #0f0f0f)',
+            },
+            keyframes: {
+                "fade-in": {
+                    "0%": { opacity: "0" },
+                    "100%": { opacity: "1" },
+                },
+                "scale-up": {
+                    "0%": { transform: "scale(0.95)", opacity: "0" },
+                    "100%": { transform: "scale(1)", opacity: "1" },
+                },
+                "bounce-slow": {
+                    "0%, 100%": { transform: "translateY(-5%)" },
+                    "50%": { transform: "translateY(5%)" },
+                }
+            },
+            animation: {
+                "fade-in": "fade-in 0.5s ease-out forwards",
+                "scale-up": "scale-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+                "bounce-slow": "bounce-slow 3s infinite ease-in-out",
             }
         },
     },
