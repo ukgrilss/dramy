@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import QRCode from 'qrcode'
+import { tkPurchase } from '../utils/tiktokPixel'
 
 export default function PaymentModal({ plan, onClose }) {
     const [loading, setLoading] = useState(true)
