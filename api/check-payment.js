@@ -31,37 +31,64 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'server_config_missing', message: 'Token PushinPay nao configurado na Vercel' })
         }
 
-        // 1. Check Status at PushinPay
-        // Doc Source 4: GET /transaction/{id} (Singular)
-        // Base URL seems to be https://api.pushinpay.com.br/api
-        const pushinResponse = await fetch(`https://api.pushinpay.com.br/api/transaction/${transaction_id}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json'
-            }
-        })
+        // 1. Check Status at PushinPay (Shotgun Strategy 🔫)
+        // Documentation is unclear, so we try multiple likely endpoints.
+        const endpoints = [
+            `https://api.pushinpay.com.br/api/pix/${transaction_id}`,
+            `https://api.pushinpay.com.br/api/transactions/${transaction_id}`,
+            `https://api.pushinpay.com.br/api/transaction/${transaction_id}`,
+            `https://api.pushinpay.com.br/api/pix/cashIn/${transaction_id}`, // Sometimes it's the creation endpoint with GET
+            `https://api.pushinpay.com.br/pix/${transaction_id}`,
+        ]
 
-        const pushinData = await pushinResponse.json().catch(() => (null))
+        let pushinResponse = null
+        let pushinData = null
+        let usedEndpoint = null
+
+        console.log(`[CheckPayment] Probing endpoints for tx: ${transaction_id}`)
+
+        for (const url of endpoints) {
+            try {
+                const resp = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                })
+
+                if (resp.ok) {
+                    pushinResponse = resp
+                    pushinData = await resp.json()
+                    usedEndpoint = url
+                    console.log(`[CheckPayment] Success at: ${url}`)
+                    break;
+                }
+            } catch (e) { /* ignore network errors on probes */ }
+        }
 
         // LOG ATTEMPT
         try {
             const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
             await supabase.from('integration_logs').insert({
-                integration_name: 'check_payment_debug',
-                event_name: 'check_attempt',
-                status: pushinResponse.ok ? 'ok' : 'error',
-                payload: { transaction_id, status: pushinResponse.status, data: pushinData },
+                integration_name: 'check_payment_probes',
+                event_name: 'final_result',
+                status: pushinResponse ? 'ok' : 'all_failed',
+                payload: {
+                    transaction_id,
+                    success_endpoint: usedEndpoint,
+                    last_data: pushinData
+                },
                 created_at: new Date()
             })
         } catch (e) { console.error("Log failed", e) }
 
-        if (!pushinResponse.ok) {
-            console.error('PushinPay Check Failed:', pushinResponse.status, pushinData)
-            return res.status(pushinResponse.status).json({
+        if (!pushinResponse || !pushinData) {
+            console.error('PushinPay Check Failed on ALL endpoints')
+            return res.status(404).json({
                 error: 'upstream_error',
-                status: pushinResponse.status,
-                details: pushinData
+                status: 404,
+                details: 'Tried 5 endpoints, all failed. Transaction might be invalid or explicity not found.'
             })
         }
 
