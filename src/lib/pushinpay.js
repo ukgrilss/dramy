@@ -39,6 +39,10 @@ export const PushinPay = {
                 throw new Error(`Erro API ${response.status}: ${JSON.stringify(data)}`)
             }
 
+            // ✅ NORMALIZATION: Ensure we have a standard ID
+            // PushinPay sometimes returns 'id', 'transaction_id', or 'orderId'
+            data.id = data.id || data.orderId || data.transaction_id || data.uuid
+
             return data
         } catch (error) {
             console.error('PushinPay Integration Error:', error)
