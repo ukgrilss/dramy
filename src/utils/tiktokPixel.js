@@ -5,15 +5,21 @@
 
 // Safe track function
 export const trackTikTokEvent = (eventName, params = {}) => {
+    // 🚨 DEBUG: Force Alert to verify execution
+    // alert(`[DEBUG] Attempting to track TikTok Event: ${eventName}`)
+
     if (typeof window !== 'undefined' && window.ttq) {
         try {
             console.log(`[TikTok Pixel] Tracking ${eventName}`, params)
             window.ttq.track(eventName, params)
+            // alert(`[DEBUG] TikTok Event Sent: ${eventName}\nParams: ${JSON.stringify(params)}`)
         } catch (err) {
             console.error('[TikTok Pixel] Error tracking event:', err)
+            alert(`[DEBUG] Error tracking TikTok event: ${err.message}`)
         }
     } else {
         console.warn('[TikTok Pixel] ttq not found (Pixel blocked or not loaded)')
+        // alert('[DEBUG] TikTok Pixel (ttq) Object NOT FOUND! (AdBlocker?)')
     }
 }
 
@@ -37,6 +43,7 @@ export const tkViewContent = (contentName) => {
 }
 
 export const tkPurchase = (value, transactionId) => {
+    alert(`[DEBUG] Disparando Purchase!\nValor: ${value}\nID: ${transactionId}`)
     trackTikTokEvent('Purchase', {
         value: value,
         currency: 'BRL',

@@ -39,9 +39,16 @@ export default function PaymentModal({ plan, onClose }) {
         await refreshProfile()
 
         // 🎵 TikTok Pixel: Purchase
-        const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
+        // Remove everything that is not digit, comma or dot
+        const cleanPrice = plan.price.replace(/[^\d,.]/g, '').replace(',', '.')
+        const numericPrice = parseFloat(cleanPrice)
+
+        console.log(`[DEBUG] Price Parsing: Original "${plan.price}" -> Clean "${cleanPrice}" -> Number ${numericPrice}`)
+
         if (!isNaN(numericPrice)) {
             tkPurchase(numericPrice, transactionId || pixData?.id)
+        } else {
+            alert(`[DEBUG] Falha ao ler preço: ${plan.price}`)
         }
     }
 
