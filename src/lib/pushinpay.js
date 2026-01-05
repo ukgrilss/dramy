@@ -6,7 +6,7 @@ export const PushinPay = {
      * @param {string} intentId - Payment intent ID from database
      * @returns {Promise<{qr_code: string, qr_code_base64: string, id: string}>}
      */
-    async createPixCharge(amountInCents, userEmail, intentId) {
+    async createPixCharge(amountInCents, userEmail, intentId, payerName = 'Cliente', payerDoc = '') {
         try {
             // Use our own Vercel Proxy to avoid CORS and hide the Token
             const response = await fetch('/api/create-pix', {
@@ -24,7 +24,9 @@ export const PushinPay = {
                         app_name: 'dramy'
                     },
                     payer: {
-                        email: userEmail
+                        email: userEmail,
+                        name: payerName,
+                        document: payerDoc || '00000000000' // Fallback to avoid error if mandatory
                     }
                 })
             })
@@ -33,7 +35,8 @@ export const PushinPay = {
 
             if (!response.ok) {
                 console.error('PushinPay API Error:', data)
-                throw new Error(data.message || `Erro API: ${response.status}`)
+                const errorDetails = data.errors ? JSON.stringify(data.errors) : (data.message || response.statusText)
+                throw new Error(`Erro API ${response.status}: ${errorDetails}`)
             }
 
             return data

@@ -135,7 +135,8 @@ export default function PaymentModal({ plan, onClose }) {
             const { intent_id, amount, email } = intentData
 
             // Create PIX charge with server-validated amount
-            const pixData = await PushinPay.createPixCharge(amount, email, intent_id)
+            const payerName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Cliente'
+            const pixData = await PushinPay.createPixCharge(amount, email, intent_id, payerName)
             setPixData(pixData)
 
             // Update profile to pending status
