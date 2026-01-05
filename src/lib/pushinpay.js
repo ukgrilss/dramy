@@ -31,12 +31,21 @@ export const PushinPay = {
                 })
             })
 
-            const data = await response.json()
+            const text = await response.text()
+            console.log("Raw Response from /api/create-pix:", text)
+
+            let data
+            try {
+                data = JSON.parse(text)
+            } catch (e) {
+                console.error("JSON Parse Error:", e)
+                throw new Error(`Erro na API (Resposta Inválida): ${text.substring(0, 100)}`)
+            }
 
             if (!response.ok) {
                 console.error('PushinPay API Error:', data)
                 // Dump the whole object to find out what's wrong
-                throw new Error(`Erro API ${response.status}: ${JSON.stringify(data)}`)
+                throw new Error(data.message || `Erro API ${response.status}: ${JSON.stringify(data)}`)
             }
 
             // ✅ NORMALIZATION: Ensure we have a standard ID
