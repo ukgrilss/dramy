@@ -32,20 +32,16 @@ export const PushinPay = {
             const data = await response.json()
 
             if (!response.ok) {
-                console.error('PushinPay Error:', data)
-                throw new Error(data.message || 'Erro ao gerar PIX')
+                console.error('PushinPay API Error:', data)
+                throw new Error(data.message || `Erro API: ${response.status}`)
             }
 
             return data
         } catch (error) {
             console.error('PushinPay Integration Error:', error)
-            // Fallback for DEV/TESTING if API fails or blocks localhost
-            console.warn('Using Mock Data for PIX')
-            return {
-                id: 'mock_' + Date.now(),
-                qr_code: '00020126580014br.gov.bcb.pix0136123e4567-e89b-12d3-a456-426614174000520400005303986540510.005802BR5913Cicrano de Tal6008Brasilia62070503***6304E2CA',
-                qr_code_base64: null // Frontend will generate QR code from qr_code text
-            }
+            // DEBUG: Show alert to user to identify the issue
+            alert(`Erro no PIX: ${error.message}`)
+            throw error // Stop execution, don't use mock data for now
         }
     }
 }
