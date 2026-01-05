@@ -47,9 +47,18 @@ export default function PaymentModal({ plan, onClose }) {
                 async (payload) => {
                     // Check if subscription became active
                     if (payload.new.subscription_active === true) {
-                        await refreshProfile() // 🔄 SYNC GLOBAL STATE
                         setActivating(false)
                         setStep('success')
+                        // 🎵 TikTok Pixel: Purchase
+                        // We use the real price from the plan
+                        const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
+                        if (!isNaN(numericPrice)) {
+                            // Assuming tkPurchase is globally available or imported
+                            // and that payload.new.id is the transaction ID or similar
+                            // If not, adjust the second argument as needed (e.g., user.id)
+                            tkPurchase(numericPrice, payload.new.id)
+                        }
+                        await refreshProfile() // 🔄 SYNC GLOBAL STATE
                     }
                 }
             )
