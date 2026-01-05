@@ -16,7 +16,7 @@ export const PushinPay = {
                     'Accept': 'application/json'
                 },
                 body: JSON.stringify({
-                    value: amountInCents,
+                    value: amountInCents / 100, // API expects Reais (e.g. 9.99), not Cents (999)
                     webhook_url: 'https://dramy.com.br/api/webhook',
                     metadata: {
                         email: userEmail,
