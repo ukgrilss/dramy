@@ -122,7 +122,7 @@ export default function PaymentModal({ plan, onClose }) {
             } catch (err) {
                 console.error("Auto-check error (ignorable):", err)
             }
-        }, 3000)
+        }, 2000)
 
         return () => clearInterval(interval)
     }, [user, step, pixData])
@@ -243,6 +243,8 @@ export default function PaymentModal({ plan, onClose }) {
         setPaymentError(null)
 
         try {
+            let result = null
+
             // 1. Force Check with Gateway via Server
             if (pixData?.id) {
                 const response = await fetch('/api/check-payment', {
@@ -253,7 +255,7 @@ export default function PaymentModal({ plan, onClose }) {
                         intent_id: pixData.metadata?.intent_id
                     })
                 })
-                const result = await response.json()
+                result = await response.json()
 
                 if (result.approved) {
                     setActivating(false)
@@ -261,9 +263,13 @@ export default function PaymentModal({ plan, onClose }) {
                     await refreshProfile()
                     return
                 } else if (result.error === 'upstream_error') {
-                    // Specific API Error
-                    alert(`Erro ao consultar Banco: ${result.status} - ${JSON.stringify(result.details)}`)
+                    // Specific API Error logic is handled below now
                 }
+            } else {
+                console.error("Missing Transaction ID in pixData", pixData)
+                alert("Erro Interno: ID da transação não encontrado no retorno do banco. Tente gerar um novo PIX.")
+                setActivating(false)
+                return
             }
 
             // 2. Fallback: Check Database
@@ -279,9 +285,9 @@ export default function PaymentModal({ plan, onClose }) {
                 return
             }
             // Still not active? Show error with debug info
-            if (!result?.approved) {
+            if (result && !result.approved) {
                 // Format: "Status Atual: pending"
-                const debugInfo = result?.debug_original_status ? ` (Status: ${result.debug_original_status})` : ''
+                const debugInfo = result.debug_original_status ? ` (Status: ${result.debug_original_status})` : ''
                 setPaymentError(`O banco ainda não confirmou o pagamento.${debugInfo} Aguarde e tente novamente.`)
             }
 
