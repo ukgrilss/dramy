@@ -17,8 +17,10 @@ BEGIN
   FROM auth.users
   WHERE email = p_email;
 
-  -- Se não achou usuário, aborta
+  -- Se não achou usuário, aborta E LOGA O ERRO
   IF v_user_id IS NULL THEN
+    INSERT INTO integration_logs (integration_name, event_name, status, payload)
+    VALUES ('database_rpc', 'error_user_not_found', 'error', jsonb_build_object('email_provided', p_email, 'error', 'No user found in auth.users'));
     RETURN;
   END IF;
 
@@ -31,9 +33,9 @@ BEGIN
     updated_at = now()
   WHERE id = v_user_id;
 
-  -- 3. (Opcional) Logar que funcionou na tabela de logs
+  -- 3. Logar que funcionou
   INSERT INTO integration_logs (integration_name, event_name, status, payload)
-  VALUES ('database_rpc', 'subscription_activated', 'success', jsonb_build_object('email', p_email, 'plan', p_plan_slug));
+  VALUES ('database_rpc', 'subscription_activated', 'success', jsonb_build_object('user_id', v_user_id, 'email', p_email, 'plan', p_plan_slug));
 
 END;
 $$;
