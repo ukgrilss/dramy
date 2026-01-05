@@ -90,23 +90,7 @@ export default function PlansPage() {
             popular: false,
             highlight: true
         },
-        {
-            name: 'Vitalício',
-            slug: 'lifetime',
-            price: 'R$ 97,90',
-            period: 'único',
-            savings: 'OFERTA ÚNICA',
-            features: [
-                'Acesso para SEMPRE',
-                'Pague uma única vez',
-                'Badge exclusivo no perfil',
-                'Grupo VIP de membros'
-            ],
-            color: 'from-emerald-400 to-cyan-600',
-            popular: false,
-            highlight: true,
-            superPremium: true
-        }
+
     ]
 
     const handleSelectPlan = (plan) => {
