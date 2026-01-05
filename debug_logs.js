@@ -27,6 +27,7 @@ async function fetchLogs() {
     const { data, error } = await supabase
         .from('integration_logs')
         .select('*')
+        .ilike('integration_name', 'check_payment%')
         .order('created_at', { ascending: false })
         .limit(10)
 
