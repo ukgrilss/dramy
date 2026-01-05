@@ -11,7 +11,7 @@ export const PushinPay = {
             const response = await fetch('https://api.pushinpay.com.br/api/pix/cashIn', {
                 method: 'POST',
                 headers: {
-                    'Authorization': 'Bearer 58245|EKxchP3pnj9rwu01buADLV7bRdZcN8bog5OwVsBMbc2f6105',
+                    'Authorization': `Bearer ${import.meta.env.VITE_PUSHINPAY_TOKEN || '58245|EKxchP3pnj9rwu01buADLV7bRdZcN8bog5OwVsBMbc2f6105'}`,
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },

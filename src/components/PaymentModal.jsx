@@ -83,6 +83,12 @@ export default function PaymentModal({ plan, onClose }) {
                 .single()
 
             if (data?.subscription_active === true) {
+                // 🎵 TikTok Pixel: Purchase
+                const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
+                if (!isNaN(numericPrice)) {
+                    tkPurchase(numericPrice, `sub_${new Date().getTime()}`)
+                }
+
                 await refreshProfile() // 🔄 SYNC GLOBAL STATE
                 setActivating(false)
                 setStep('success')
