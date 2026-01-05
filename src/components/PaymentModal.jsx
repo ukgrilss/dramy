@@ -96,34 +96,43 @@ export default function PaymentModal({ plan, onClose }) {
                         await refreshProfile() // 🔄 SYNC GLOBAL STATE
                         setActivating(false)
                         setStep('success')
-                        return
-                    }
-                } else {
-                    // Check if it's a config error
-                    const errorJson = await response.json().catch(() => ({}))
-                    if (errorJson.error === 'server_config_missing') {
-                        console.error("CRITICAL: Vercel Env Vars missing")
-                        alert("ERRO CRÍTICO NO SERVIDOR: O Token do PushinPay não está configurado nas Variáveis de Ambiente da Vercel. O pagamento não será identificado.")
-                        clearInterval(interval) // Stop trying
-                    }
-                }
+                        if (result.approved) {
+                            await refreshProfile() // 🔄 SYNC GLOBAL STATE
+                            setActivating(false)
+                            setStep('success')
 
-                // Fallback: Check Database (in case Webhook was faster)
-                const { data } = await supabase
-                    .from('profiles')
-                    .select('subscription_active')
-                    .eq('id', user.id)
-                    .single()
+                            // 🎵 TikTok Pixel: Purchase (Sync with Polling)
+                            const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
+                            if (!isNaN(numericPrice)) {
+                                tkPurchase(numericPrice, pixData.id)
+                            }
+                            return
+                        }
+                        // Check if it's a config error
+                        const errorJson = await response.json().catch(() => ({}))
+                        if (errorJson.error === 'server_config_missing') {
+                            console.error("CRITICAL: Vercel Env Vars missing")
+                            alert("ERRO CRÍTICO NO SERVIDOR: O Token do PushinPay não está configurado nas Variáveis de Ambiente da Vercel. O pagamento não será identificado.")
+                            clearInterval(interval) // Stop trying
+                        }
+                    }
 
-                if (data?.subscription_active === true) {
-                    setStep('success')
-                    await refreshProfile()
-                    setActivating(false)
+                    // Fallback: Check Database (in case Webhook was faster)
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('subscription_active')
+                        .eq('id', user.id)
+                        .single()
+
+                    if (data?.subscription_active === true) {
+                        setStep('success')
+                        await refreshProfile()
+                        setActivating(false)
+                    }
+                } catch (err) {
+                    console.error("Auto-check error (ignorable):", err)
                 }
-            } catch (err) {
-                console.error("Auto-check error (ignorable):", err)
-            }
-        }, 2000)
+            }, 2000)
 
         return () => clearInterval(interval)
     }, [user, step, pixData])
@@ -271,9 +280,18 @@ export default function PaymentModal({ plan, onClose }) {
                 if (result.approved) {
                     setActivating(false)
                     setStep('success')
-                    await refreshProfile()
-                    return
-                } else if (result.error === 'upstream_error') {
+                    if (result.approved) {
+                        setActivating(false)
+                        setStep('success')
+                        await refreshProfile()
+
+                        // 🎵 TikTok Pixel: Purchase (Sync with Manual Click)
+                        const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
+                        if (!isNaN(numericPrice)) {
+                            tkPurchase(numericPrice, pixData.id)
+                        }
+                        return
+                    }
                     // Specific API Error logic is handled below now
                 }
             } else {
