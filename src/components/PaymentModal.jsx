@@ -278,15 +278,22 @@ export default function PaymentModal({ plan, onClose }) {
                 setStep('success')
                 return
             }
+            // Still not active? Show error with debug info
+            if (!result?.approved) {
+                // Format: "Status Atual: pending"
+                const debugInfo = result?.debug_original_status ? ` (Status: ${result.debug_original_status})` : ''
+                setPaymentError(`O banco ainda não confirmou o pagamento.${debugInfo} Aguarde e tente novamente.`)
+            }
+
         } catch (err) {
             console.error('Error checking status:', err)
+            // setPaymentError('Erro de conexão ao verificar.')
         }
 
-        // Still not active? Show message
+        // Timeout fallback removal is no longer needed as we set error directly
         setTimeout(() => {
             setActivating(false)
-            setPaymentError('O banco ainda não confirmou o pagamento. Aguarde mais uns segundos e tente novamente.')
-        }, 2000)
+        }, 500)
     }
 
     if (!plan) return null
