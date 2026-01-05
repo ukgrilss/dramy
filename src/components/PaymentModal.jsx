@@ -296,6 +296,11 @@ export default function PaymentModal({ plan, onClose }) {
             }
             // Still not active? Show error with debug info
             if (result && !result.approved) {
+                // 🚨 CRITICAL DEBUG: If backend returned an explicit system error (like RPC failure), show it!
+                if (result.message && result.message.includes('RPC Error')) {
+                    alert(`ERRO DE SISTEMA: O banco de dados recusou a ativação.\n\nDetalhe: ${result.message}\n\nTire print e envie ao suporte.`)
+                }
+
                 // Format: "Status Atual: pending"
                 const debugInfo = result.debug_original_status ? ` (Status: ${result.debug_original_status})` : ''
                 setPaymentError(`O banco ainda não confirmou o pagamento.${debugInfo} Aguarde e tente novamente.`)

@@ -117,6 +117,14 @@ export default async function handler(req, res) {
 
                 if (rpcError) {
                     console.error("RPC Failed:", rpcError)
+                    // Log to Supabase for debugging
+                    await supabase.from('integration_logs').insert({
+                        integration_name: 'database_rpc_fail',
+                        event_name: 'rpc_error',
+                        status: 'error',
+                        payload: { error: rpcError, email: userEmail, transaction_id },
+                        created_at: new Date()
+                    })
                     throw new Error(`RPC Error: ${rpcError.message} (${rpcError.code})`)
                 }
 
