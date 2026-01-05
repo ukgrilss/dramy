@@ -287,7 +287,8 @@ export default function PaymentModal({ plan, onClose }) {
 
         } catch (err) {
             console.error('Error checking status:', err)
-            // setPaymentError('Erro de conexão ao verificar.')
+            // 🚨 FALLBACK: Alert the user so we know what broke (e.g. JSON Parse Error)
+            alert(`Erro Técnico: ${err.message}`)
         }
 
         // Timeout fallback removal is no longer needed as we set error directly
