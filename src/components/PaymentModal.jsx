@@ -280,18 +280,15 @@ export default function PaymentModal({ plan, onClose }) {
                 if (result.approved) {
                     setActivating(false)
                     setStep('success')
-                    if (result.approved) {
-                        setActivating(false)
-                        setStep('success')
-                        await refreshProfile()
+                    await refreshProfile()
 
-                        // 🎵 TikTok Pixel: Purchase (Sync with Manual Click)
-                        const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
-                        if (!isNaN(numericPrice)) {
-                            tkPurchase(numericPrice, pixData.id)
-                        }
-                        return
+                    // 🎵 TikTok Pixel: Purchase (Sync with Manual Click)
+                    const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
+                    if (!isNaN(numericPrice)) {
+                        tkPurchase(numericPrice, pixData.id)
                     }
+                    return
+                } else if (result.error === 'upstream_error') {
                     // Specific API Error logic is handled below now
                 }
             } else {
