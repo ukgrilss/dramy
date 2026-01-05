@@ -29,6 +29,22 @@ export default function PaymentModal({ plan, onClose }) {
         }
     }, [pixData])
 
+    // ✅ CENTRALIZED SUCCESS HANDLER
+    const handlePaymentSuccess = async (transactionId) => {
+        if (step === 'success') return // Prevent double-fire
+
+        console.log("✅ PAYMENT CONFIRMED! Initializing Success State...")
+        setActivating(false)
+        setStep('success')
+        await refreshProfile()
+
+        // 🎵 TikTok Pixel: Purchase
+        const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
+        if (!isNaN(numericPrice)) {
+            tkPurchase(numericPrice, transactionId || pixData?.id)
+        }
+    }
+
     // =========================================================
     // ⚡ REALTIME LISTENER FOR AUTO-APPROVAL ⚡
     // =========================================================
@@ -48,18 +64,7 @@ export default function PaymentModal({ plan, onClose }) {
                 async (payload) => {
                     // Check if subscription became active
                     if (payload.new.subscription_active === true) {
-                        setActivating(false)
-                        setStep('success')
-                        // 🎵 TikTok Pixel: Purchase
-                        // We use the real price from the plan
-                        const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
-                        if (!isNaN(numericPrice)) {
-                            // Assuming tkPurchase is globally available or imported
-                            // and that payload.new.id is the transaction ID or similar
-                            // If not, adjust the second argument as needed (e.g., user.id)
-                            tkPurchase(numericPrice, payload.new.id)
-                        }
-                        await refreshProfile() // 🔄 SYNC GLOBAL STATE
+                        await handlePaymentSuccess(payload.new.id)
                     }
                 }
             )
@@ -94,15 +99,7 @@ export default function PaymentModal({ plan, onClose }) {
                     const result = await response.json()
 
                     if (result.approved) {
-                        await refreshProfile() // 🔄 SYNC GLOBAL STATE
-                        setActivating(false)
-                        setStep('success')
-
-                        // 🎵 TikTok Pixel: Purchase (Sync with Polling)
-                        const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
-                        if (!isNaN(numericPrice)) {
-                            tkPurchase(numericPrice, pixData.id)
-                        }
+                        await handlePaymentSuccess(pixData.id)
                         return
                     } else {
                         // Check if it's a config error
@@ -122,9 +119,7 @@ export default function PaymentModal({ plan, onClose }) {
                         .single()
 
                     if (data?.subscription_active === true) {
-                        setStep('success')
-                        await refreshProfile()
-                        setActivating(false)
+                        await handlePaymentSuccess(pixData.id)
                     }
                 }
             } catch (err) {
@@ -276,15 +271,7 @@ export default function PaymentModal({ plan, onClose }) {
                 result = await response.json()
 
                 if (result.approved) {
-                    setActivating(false)
-                    setStep('success')
-                    await refreshProfile()
-
-                    // 🎵 TikTok Pixel: Purchase (Sync with Manual Click)
-                    const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
-                    if (!isNaN(numericPrice)) {
-                        tkPurchase(numericPrice, pixData.id)
-                    }
+                    await handlePaymentSuccess(pixData.id)
                     return
                 } else if (result.error === 'upstream_error') {
                     // Specific API Error logic is handled below now
@@ -304,8 +291,7 @@ export default function PaymentModal({ plan, onClose }) {
                 .single()
 
             if (profile?.subscription_active === true) {
-                setActivating(false)
-                setStep('success')
+                await handlePaymentSuccess(pixData.id)
                 return
             }
             // Still not active? Show error with debug info
