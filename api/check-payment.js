@@ -32,11 +32,9 @@ export default async function handler(req, res) {
         }
 
         // 1. Check Status at PushinPay
-        // Doc: GET /api/transactions/{id} (Trying plural, common standard)
-        // If 404 again, we try singular. But documentation implies /transactions is often alias.
-        // Actually, let's stick to the search result [4] which said /transaction/{id}
-        // Wait, looking at general patterns, let's try /api/transactions/${transaction_id}
-        const pushinResponse = await fetch(`https://api.pushinpay.com.br/api/transactions/${transaction_id}`, {
+        // Doc Source 4: GET /transaction/{id} (Singular)
+        // Base URL seems to be https://api.pushinpay.com.br/api
+        const pushinResponse = await fetch(`https://api.pushinpay.com.br/api/transaction/${transaction_id}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
