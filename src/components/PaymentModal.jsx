@@ -97,6 +97,14 @@ export default function PaymentModal({ plan, onClose }) {
                         setStep('success')
                         return
                     }
+                } else {
+                    // Check if it's a config error
+                    const errorJson = await response.json().catch(() => ({}))
+                    if (errorJson.error === 'server_config_missing') {
+                        console.error("CRITICAL: Vercel Env Vars missing")
+                        alert("ERRO CRÍTICO NO SERVIDOR: O Token do PushinPay não está configurado nas Variáveis de Ambiente da Vercel. O pagamento não será identificado.")
+                        clearInterval(interval) // Stop trying
+                    }
                 }
 
                 // Fallback: Check Database (in case Webhook was faster)
@@ -252,6 +260,9 @@ export default function PaymentModal({ plan, onClose }) {
                     setStep('success')
                     await refreshProfile()
                     return
+                } else if (result.error === 'upstream_error') {
+                    // Specific API Error
+                    alert(`Erro ao consultar Banco: ${result.status} - ${JSON.stringify(result.details)}`)
                 }
             }
 

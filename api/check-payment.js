@@ -24,7 +24,12 @@ export default async function handler(req, res) {
 
     try {
         const token = process.env.VITE_PUSHINPAY_TOKEN || process.env.PUSHINPAY_TOKEN
-        if (!token) throw new Error('config_missing')
+
+        // 🚨 DIAGNOSIS: Tell frontend if token is missing
+        if (!token) {
+            console.error('Server requires VITE_PUSHINPAY_TOKEN')
+            return res.status(500).json({ error: 'server_config_missing', message: 'Token PushinPay nao configurado na Vercel' })
+        }
 
         // 1. Check Status at PushinPay
         const pushinResponse = await fetch(`https://api.pushinpay.com.br/api/pix/${transaction_id}`, {
@@ -35,11 +40,29 @@ export default async function handler(req, res) {
             }
         })
 
+        const pushinData = await pushinResponse.json().catch(() => (null))
+
+        // LOG ATTEMPT
+        try {
+            const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+            await supabase.from('integration_logs').insert({
+                integration_name: 'check_payment_debug',
+                event_name: 'check_attempt',
+                status: pushinResponse.ok ? 'ok' : 'error',
+                payload: { transaction_id, status: pushinResponse.status, data: pushinData },
+                created_at: new Date()
+            })
+        } catch (e) { console.error("Log failed", e) }
+
         if (!pushinResponse.ok) {
-            throw new Error('Failed to fetch from PushinPay')
+            console.error('PushinPay Check Failed:', pushinResponse.status, pushinData)
+            return res.status(pushinResponse.status).json({
+                error: 'upstream_error',
+                status: pushinResponse.status,
+                details: pushinData
+            })
         }
 
-        const pushinData = await pushinResponse.json()
         const status = pushinData.status // 'paid' or 'approved'
 
         // 2. If Paid, Force Approval
