@@ -15,7 +15,7 @@ BEGIN
   -- 1. Descobrir ID do usuário pelo email
   SELECT id INTO v_user_id
   FROM auth.users
-  WHERE email = p_email;
+  WHERE email ILIKE p_email;
 
   -- Se não achou usuário, aborta E LOGA O ERRO
   IF v_user_id IS NULL THEN
