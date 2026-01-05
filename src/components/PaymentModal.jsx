@@ -83,10 +83,8 @@ export default function PaymentModal({ plan, onClose }) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        body: JSON.stringify({
-                            transaction_id: pixData.id,
-                            intent_id: pixData.local_intent_id || pixData.metadata?.intent_id
-                        })
+                        transaction_id: pixData.id,
+                        intent_id: pixData.local_intent_id || pixData.metadata?.intent_id
                     })
                 })
 
@@ -263,10 +261,8 @@ export default function PaymentModal({ plan, onClose }) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        body: JSON.stringify({
-                            transaction_id: pixData.id,
-                            intent_id: pixData.local_intent_id || pixData.metadata?.intent_id
-                        })
+                        transaction_id: pixData.id,
+                        intent_id: pixData.local_intent_id || pixData.metadata?.intent_id
                     })
                 })
                 result = await response.json()
