@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Check, Shield, Play, ArrowLeft, Star, Crown, Zap } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import PaymentModal from '../../components/PaymentModal'
+import { tkInitiateCheckout } from '../../utils/tiktokPixel'
 
 export default function PlansPage() {
     const [selectedPlan, setSelectedPlan] = useState(null)
@@ -109,6 +110,12 @@ export default function PlansPage() {
     ]
 
     const handleSelectPlan = (plan) => {
+        // 🎵 TikTok Pixel: InitiateCheckout
+        const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
+        if (!isNaN(numericPrice)) {
+            tkInitiateCheckout(plan.name, numericPrice)
+        }
+
         if (!user) {
             // Se não estiver logado, redireciona para o cadastro (com o plano na URL para uso futuro)
             navigate(`/register?plan=${plan.slug}`)

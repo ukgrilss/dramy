@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ArrowLeft, Mail, Lock, User, Loader2, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { generateFingerprint, getUserAgent } from '@/lib/fingerprint'
+import { tkCompleteRegistration } from '@/utils/tiktokPixel'
 
 export default function Register() {
     const navigate = useNavigate()
@@ -84,6 +85,9 @@ export default function Register() {
             if (result?.user?.id) {
                 const userId = result.user.id
                 await supabase.from('profiles').update(utmParams).eq('id', userId)
+
+                // 🎵 TikTok Pixel: CompleteRegistration
+                tkCompleteRegistration()
 
                 fetch('/api/track-event', {
                     method: 'POST',
