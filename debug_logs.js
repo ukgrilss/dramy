@@ -27,8 +27,9 @@ async function fetchLogs() {
     const { data, error } = await supabase
         .from('integration_logs')
         .select('*')
+        .or('integration_name.eq.check_payment_probes_parallel,integration_name.eq.database_rpc')
         .order('created_at', { ascending: false })
-        .limit(20)
+        .limit(10)
 
     if (error) {
         console.error("Error fetching logs:", error)

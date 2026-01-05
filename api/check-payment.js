@@ -109,11 +109,16 @@ export default async function handler(req, res) {
                 console.log(`[CheckPayment] Unlocking user: ${userEmail}`)
 
                 // FORCE APPROVAL via RPC
-                await supabase.rpc('handle_payment_webhook', {
+                const { error: rpcError } = await supabase.rpc('handle_payment_webhook', {
                     p_email: userEmail,
                     p_plan_slug: planSlug,
                     p_transaction_id: transaction_id
                 })
+
+                if (rpcError) {
+                    console.error("RPC Failed:", rpcError)
+                    throw new Error(`RPC Error: ${rpcError.message} (${rpcError.code})`)
+                }
 
                 return res.status(200).json({ status: 'paid', approved: true })
             } else {
