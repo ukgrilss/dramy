@@ -83,8 +83,10 @@ export default function PaymentModal({ plan, onClose }) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        transaction_id: pixData.id,
-                        intent_id: pixData.metadata?.intent_id
+                        body: JSON.stringify({
+                            transaction_id: pixData.id,
+                            intent_id: pixData.local_intent_id || pixData.metadata?.intent_id
+                        })
                     })
                 })
 
@@ -164,14 +166,15 @@ export default function PaymentModal({ plan, onClose }) {
             const { intent_id, amount, email } = intentData
 
             // Create PIX charge with server-validated amount
-            // Create PIX charge with server-validated amount
             const payerName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Cliente'
             const rawPixData = await PushinPay.createPixCharge(amount, email, intent_id, payerName)
 
             // 🚨 FORCE FAILSAFE: Ensure ID exists even if library failed to normalize
+            // ALSO: Store intent_id locally because API might not echo it back correctly
             const pixData = {
                 ...rawPixData,
-                id: rawPixData.id || rawPixData.orderId || rawPixData.transaction_id || rawPixData.uuid
+                id: rawPixData.id || rawPixData.orderId || rawPixData.transaction_id || rawPixData.uuid,
+                local_intent_id: intent_id // <--- IMPORTANT: Save this for the verification step
             }
 
             console.log("Pix Data Normalized:", pixData)
@@ -260,8 +263,10 @@ export default function PaymentModal({ plan, onClose }) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        transaction_id: pixData.id,
-                        intent_id: pixData.metadata?.intent_id
+                        body: JSON.stringify({
+                            transaction_id: pixData.id,
+                            intent_id: pixData.local_intent_id || pixData.metadata?.intent_id
+                        })
                     })
                 })
                 result = await response.json()
