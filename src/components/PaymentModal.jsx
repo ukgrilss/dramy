@@ -77,24 +77,29 @@ export default function PaymentModal({ plan, onClose }) {
 
         const interval = setInterval(async () => {
             try {
-                // 1. Check via API (Force Refresh)
+                // 🚀 TURBO MODE: Check directly with Gateway every 3s
+                // This bypasses webhook delays completely
                 const response = await fetch('/api/check-payment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         transaction_id: pixData.id,
-                        intent_id: pixData.metadata?.intent_id // Pass intent_id to help lookup
+                        intent_id: pixData.metadata?.intent_id
                     })
                 })
-                const result = await response.json()
 
-                if (result.approved) {
-                    setStep('success')
-                    await refreshProfile()
-                    return
+                // If the check fails (network/404), dont crash, just ignore
+                if (response.ok) {
+                    const result = await response.json()
+                    if (result.approved) {
+                        await refreshProfile() // 🔄 SYNC GLOBAL STATE
+                        setActivating(false)
+                        setStep('success')
+                        return
+                    }
                 }
 
-                // 2. Check Database Profile (Just in case Webhook won race)
+                // Fallback: Check Database (in case Webhook was faster)
                 const { data } = await supabase
                     .from('profiles')
                     .select('subscription_active')
@@ -107,7 +112,7 @@ export default function PaymentModal({ plan, onClose }) {
                     setActivating(false)
                 }
             } catch (err) {
-                console.error("Polling error", err)
+                console.error("Auto-check error (ignorable):", err)
             }
         }, 3000)
 
@@ -230,7 +235,27 @@ export default function PaymentModal({ plan, onClose }) {
         setPaymentError(null)
 
         try {
-            // ⚡ Double check in database directly
+            // 1. Force Check with Gateway via Server
+            if (pixData?.id) {
+                const response = await fetch('/api/check-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        transaction_id: pixData.id,
+                        intent_id: pixData.metadata?.intent_id
+                    })
+                })
+                const result = await response.json()
+
+                if (result.approved) {
+                    setActivating(false)
+                    setStep('success')
+                    await refreshProfile()
+                    return
+                }
+            }
+
+            // 2. Fallback: Check Database
             const { data: profile } = await supabase
                 .from('profiles')
                 .select('subscription_active')
@@ -249,7 +274,7 @@ export default function PaymentModal({ plan, onClose }) {
         // Still not active? Show message
         setTimeout(() => {
             setActivating(false)
-            setPaymentError('Pagamento ainda em processamento. Aguarde alguns segundos e tente novamente.')
+            setPaymentError('O banco ainda não confirmou o pagamento. Aguarde mais uns segundos e tente novamente.')
         }, 2000)
     }
 
