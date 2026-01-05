@@ -19,6 +19,19 @@ export default async function handler(req, res) {
         const payload = req.body
         console.log('[Webhook] Received Payload:', JSON.stringify(payload, null, 2))
 
+        // 🚨 TRACE LOG: Log raw entry to DB to prove we received it
+        try {
+            await supabase.from('integration_logs').insert({
+                integration_name: 'webhook_debug',
+                event_name: 'payload_received',
+                status: 'info',
+                payload: payload,
+                created_at: new Date()
+            })
+        } catch (logErr) {
+            console.error('Failed to log to DB:', logErr)
+        }
+
         // PushinPay Status
         const status = payload.status
         const isPaid = status === 'paid' || status === 'approved'

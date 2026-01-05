@@ -70,33 +70,49 @@ export default function PaymentModal({ plan, onClose }) {
     }, [user, step])
 
     // =========================================================
-    // ⚡ FALLBACK POLLING (DOUBLE CHECK EVERY 2s) ⚡
+    // ⚡ FALLBACK POLLING (DOUBLE CHECK EVERY 3s) ⚡
     // =========================================================
     useEffect(() => {
-        if (!user || step === 'success') return
+        if (!user || step === 'success' || !pixData?.id) return
 
         const interval = setInterval(async () => {
-            const { data } = await supabase
-                .from('profiles')
-                .select('subscription_active')
-                .eq('id', user.id)
-                .single()
+            try {
+                // 1. Check via API (Force Refresh)
+                const response = await fetch('/api/check-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        transaction_id: pixData.id,
+                        intent_id: pixData.metadata?.intent_id // Pass intent_id to help lookup
+                    })
+                })
+                const result = await response.json()
 
-            if (data?.subscription_active === true) {
-                // 🎵 TikTok Pixel: Purchase
-                const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
-                if (!isNaN(numericPrice)) {
-                    tkPurchase(numericPrice, `sub_${new Date().getTime()}`)
+                if (result.approved) {
+                    setStep('success')
+                    await refreshProfile()
+                    return
                 }
 
-                await refreshProfile() // 🔄 SYNC GLOBAL STATE
-                setActivating(false)
-                setStep('success')
+                // 2. Check Database Profile (Just in case Webhook won race)
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('subscription_active')
+                    .eq('id', user.id)
+                    .single()
+
+                if (data?.subscription_active === true) {
+                    setStep('success')
+                    await refreshProfile()
+                    setActivating(false)
+                }
+            } catch (err) {
+                console.error("Polling error", err)
             }
-        }, 2000)
+        }, 3000)
 
         return () => clearInterval(interval)
-    }, [user, step])
+    }, [user, step, pixData])
 
 
     const generateQRCode = async (text) => {
