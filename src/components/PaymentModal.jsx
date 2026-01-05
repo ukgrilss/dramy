@@ -164,8 +164,17 @@ export default function PaymentModal({ plan, onClose }) {
             const { intent_id, amount, email } = intentData
 
             // Create PIX charge with server-validated amount
+            // Create PIX charge with server-validated amount
             const payerName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Cliente'
-            const pixData = await PushinPay.createPixCharge(amount, email, intent_id, payerName)
+            const rawPixData = await PushinPay.createPixCharge(amount, email, intent_id, payerName)
+
+            // 🚨 FORCE FAILSAFE: Ensure ID exists even if library failed to normalize
+            const pixData = {
+                ...rawPixData,
+                id: rawPixData.id || rawPixData.orderId || rawPixData.transaction_id || rawPixData.uuid
+            }
+
+            console.log("Pix Data Normalized:", pixData)
             setPixData(pixData)
 
             // Update profile to pending status

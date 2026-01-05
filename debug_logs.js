@@ -27,9 +27,9 @@ async function fetchLogs() {
     const { data, error } = await supabase
         .from('integration_logs')
         .select('*')
-        .eq('event_name', 'pix_created')
+        .ilike('integration_name', 'check_payment%')
         .order('created_at', { ascending: false })
-        .limit(5)
+        .limit(10)
 
     if (error) {
         console.error("Error fetching logs:", error)
