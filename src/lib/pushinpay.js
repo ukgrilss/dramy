@@ -8,19 +8,19 @@ export const PushinPay = {
      */
     async createPixCharge(amountInCents, userEmail, intentId) {
         try {
-            const response = await fetch('https://api.pushinpay.com.br/api/pix/cashIn', {
+            // Use our own Vercel Proxy to avoid CORS and hide the Token
+            const response = await fetch('/api/create-pix', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${import.meta.env.VITE_PUSHINPAY_TOKEN || '58245|EKxchP3pnj9rwu01buADLV7bRdZcN8bog5OwVsBMbc2f6105'}`,
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
                 body: JSON.stringify({
-                    value: amountInCents, // ✅ Now validated by server!
+                    value: amountInCents,
                     webhook_url: 'https://dramy.com.br/api/webhook',
                     metadata: {
                         email: userEmail,
-                        intent_id: intentId, // Track payment intent
+                        intent_id: intentId,
                         app_name: 'dramy'
                     },
                     payer: {
