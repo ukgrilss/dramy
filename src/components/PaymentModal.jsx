@@ -92,30 +92,27 @@ export default function PaymentModal({ plan, onClose }) {
                 // If the check fails (network/404), dont crash, just ignore
                 if (response.ok) {
                     const result = await response.json()
+
                     if (result.approved) {
                         await refreshProfile() // 🔄 SYNC GLOBAL STATE
                         setActivating(false)
                         setStep('success')
-                        if (result.approved) {
-                            await refreshProfile() // 🔄 SYNC GLOBAL STATE
-                            setActivating(false)
-                            setStep('success')
 
-                            // 🎵 TikTok Pixel: Purchase (Sync with Polling)
-                            const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
-                            if (!isNaN(numericPrice)) {
-                                tkPurchase(numericPrice, pixData.id)
-                            }
-                            return
+                        // 🎵 TikTok Pixel: Purchase (Sync with Polling)
+                        const numericPrice = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'))
+                        if (!isNaN(numericPrice)) {
+                            tkPurchase(numericPrice, pixData.id)
                         }
+                        return
+                    } else {
                         // Check if it's a config error
-                        const errorJson = await response.json().catch(() => ({}))
-                        if (errorJson.error === 'server_config_missing') {
+                        if (result.error === 'server_config_missing') {
                             console.error("CRITICAL: Vercel Env Vars missing")
                             alert("ERRO CRÍTICO NO SERVIDOR: O Token do PushinPay não está configurado nas Variáveis de Ambiente da Vercel. O pagamento não será identificado.")
                             clearInterval(interval) // Stop trying
                         }
                     }
+                } else {
 
                     // Fallback: Check Database (in case Webhook was faster)
                     const { data } = await supabase
@@ -129,10 +126,11 @@ export default function PaymentModal({ plan, onClose }) {
                         await refreshProfile()
                         setActivating(false)
                     }
-                } catch (err) {
-                    console.error("Auto-check error (ignorable):", err)
                 }
-            }, 2000)
+            } catch (err) {
+                console.error("Auto-check error (ignorable):", err)
+            }
+        }, 2000)
 
         return () => clearInterval(interval)
     }, [user, step, pixData])
