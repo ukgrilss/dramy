@@ -16,88 +16,96 @@ export default async function handler(req, res) {
             process.env.SUPABASE_SERVICE_ROLE_KEY
         )
 
-        const paymentData = req.body
-        const isPaid =
-            paymentData?.status === 'paid' ||
-            paymentData?.status === 'approved'
+        const payload = req.body
+        console.log('[Webhook] Received Payload:', JSON.stringify(payload, null, 2))
+
+        // PushinPay Status
+        const status = payload.status
+        const isPaid = status === 'paid' || status === 'approved'
 
         if (!isPaid) {
-            return res.status(200).json({ ignored: true })
+            console.log('[Webhook] Ignored status:', status)
+            return res.status(200).json({ ignored: true, status })
         }
 
-        /**
-         * ⚠️ REGRA DE OURO
-         * O webhook NÃO CONFIA em txId do gateway
-         * Ele SEMPRE busca o pix_pending salvo no banco
-         */
+        // Extract Intent ID (Metadata)
+        const intentId = payload.metadata?.intent_id || payload.metadata?.intention_id
 
-        // 1️⃣ Encontrar o PIX PENDENTE REAL (ÂNCORA)
-        const { data: originalLog, error: logError } = await supabase
-            .from('integration_logs')
-            .select('transaction_id, payload')
-            .eq('integration_name', 'utmify_env')
-            .eq('event_name', 'pix_pending')
-            .eq('status', 'success')
-            .order('created_at', { ascending: false })
-            .limit(1)
+        if (!intentId) {
+            console.error('[Webhook] Missing intent_id in metadata')
+            // Don't error out, maybe we can find by transaction_id?
+            // But for now, we rely on metadata we sent.
+            return res.status(200).json({ error: 'partial_data' })
+        }
+
+        console.log('[Webhook] Processing Payment for Intent:', intentId)
+
+        // 1. Get Payment Intent from DB
+        const { data: intent, error: intentError } = await supabase
+            .from('payment_intents')
+            .select('*')
+            .eq('id', intentId)
             .single()
 
-        if (logError || !originalLog) {
-            console.error('[Webhook] CRITICAL: pix_pending anchor not found')
-            return res.status(200).json({ error: 'pix_pending_not_found' })
+        if (intentError || !intent) {
+            console.error('[Webhook] Intent not found in DB:', intentId)
+            // It might be a test payment or mismatched DB
+            return res.status(200).json({ error: 'intent_not_found' })
         }
 
-        const realTransactionId = originalLog.transaction_id
+        // 2. Approve Access (Set subscription_active = true)
+        const { error: rpcError } = await supabase.rpc('handle_payment_webhook', {
+            p_email: intent.email,
+            p_plan_slug: intent.plan_slug || 'monthly',
+            p_transaction_id: payload.id || intentId
+        })
 
-        // 2️⃣ Aprovar acesso do usuário (se existir intent)
-        try {
-            const { data: intent } = await supabase
-                .from('payment_intents')
-                .select('*')
-                .eq('transaction_id', realTransactionId)
-                .single()
-
-            if (intent?.email) {
-                await supabase.rpc('handle_payment_webhook', {
-                    p_email: intent.email,
-                    p_plan_slug: intent.plan_slug || 'monthly',
-                    p_transaction_id: realTransactionId
-                })
-            }
-        } catch (e) {
-            console.warn('[Webhook] Payment intent not found (non-blocking)')
+        if (rpcError) {
+            console.error('[Webhook] RPC Error:', rpcError)
+            return res.status(500).json({ error: 'approval_failed' })
         }
 
-        // 3️⃣ STRICT REPLAY PARA UTMIFY
+        console.log('[Webhook] Access Approved for:', intent.email)
+
+        // 3. Notify Utmify (Server-side Purchase Event)
         if (process.env.UTMIFY_API_KEY) {
-            const approvedDate = formatStatsDate(new Date())
+            try {
+                const approvedDate = formatStatsDate(new Date())
+                // Use intent.amount (which is in cents) 
+                // sendUtmifyOrder expects cents.
 
-            // CLONE PERFEITO DO PAYLOAD ORIGINAL
-            const replayPayload = JSON.parse(JSON.stringify(originalLog.payload))
-            replayPayload.status = 'paid'
-            replayPayload.approvedDate = approvedDate
-
-            const result = await sendUtmifyOrder({
-                eventName: 'webhook_paid_replay',
-                rawPayload: replayPayload
-            })
-
-            // 4️⃣ Log final do pagamento
-            await supabase.from('integration_logs').insert({
-                transaction_id: realTransactionId,
-                integration_name: 'utmify_env',
-                event_name: 'purchase',
-                status: result.success ? 'success' : 'failed',
-                payload: result.payload,
-                response: result.response || { error: result.error },
-                created_at: new Date()
-            })
+                await sendUtmifyOrder({
+                    orderId: intentId, // Keep consistent with checkout
+                    status: 'paid',
+                    valueInCents: intent.amount || 0,
+                    createdAt: formatStatsDate(intent.created_at || new Date()),
+                    approvedDate: approvedDate,
+                    customer: {
+                        email: intent.email,
+                        ip: '127.0.0.1' // Webhook doesn't have user IP
+                    },
+                    utm: {}, // We can't easily get UTMs here unless stored in intent
+                    eventName: 'webhook_purchase'
+                })
+                console.log('[Webhook] Utmify Notified')
+            } catch (utmError) {
+                console.error('[Webhook] Utmify Error:', utmError)
+            }
         }
+
+        // 4. Update Intent Status
+        await supabase
+            .from('payment_intents')
+            .update({
+                status: 'paid',
+                transaction_id: payload.id
+            })
+            .eq('id', intentId)
 
         return res.status(200).json({ success: true })
 
     } catch (err) {
-        console.error('Webhook Error:', err)
+        console.error('[Webhook] Server Error:', err)
         return res.status(500).json({ error: err.message })
     }
 }
