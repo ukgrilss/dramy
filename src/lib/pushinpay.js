@@ -26,7 +26,7 @@ export const PushinPay = {
                     payer: {
                         email: userEmail,
                         name: payerName,
-                        document: payerDoc || '00000000000' // Fallback to avoid error if mandatory
+                        ...(payerDoc ? { document: payerDoc } : {}) // Only send if we have a real one
                     }
                 })
             })
@@ -35,8 +35,8 @@ export const PushinPay = {
 
             if (!response.ok) {
                 console.error('PushinPay API Error:', data)
-                const errorDetails = data.errors ? JSON.stringify(data.errors) : (data.message || response.statusText)
-                throw new Error(`Erro API ${response.status}: ${errorDetails}`)
+                // Dump the whole object to find out what's wrong
+                throw new Error(`Erro API ${response.status}: ${JSON.stringify(data)}`)
             }
 
             return data
