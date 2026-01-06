@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import QRCode from 'qrcode'
 import { tkPurchase } from '../utils/tiktokPixel'
+import { utmifyPurchase } from '../utils/utmifyPixel'
 
 export default function PaymentModal({ plan, onClose }) {
     const [loading, setLoading] = useState(true)
@@ -30,26 +31,39 @@ export default function PaymentModal({ plan, onClose }) {
     }, [pixData])
 
     // ✅ CENTRALIZED SUCCESS HANDLER
+    // ✅ CENTRALIZED SUCCESS HANDLER
     const handlePaymentSuccess = async (transactionId) => {
         if (step === 'success') return // Prevent double-fire
 
+        // 🚨 DEBUG: PROOF OF LIFE
+        // alert(`[DEBUG] SYSTEM: Confirming Payment...\nID: ${transactionId || 'Unknown'}`)
+
+        // 1. FIRE PIXELS FIRST (Critical Priority)
+        try {
+            const cleanPrice = plan.price.replace(/[^\d,.]/g, '').replace(',', '.')
+            const numericPrice = parseFloat(cleanPrice)
+
+            if (!isNaN(numericPrice)) {
+                // TIkTok
+                tkPurchase(numericPrice, transactionId || pixData?.id)
+
+                // UTMify (with Debug)
+                console.log(`[UTMify] Sending Purchase: ${numericPrice}`)
+                //  alert(`[DEBUG] Enviando UTMify: ${numericPrice}`)
+                utmifyPurchase(numericPrice, transactionId || pixData?.id)
+            } else {
+                console.error(`[DEBUG] Price Error: ${plan.price}`)
+                alert(`[DEBUG] Erro Preço: ${plan.price}`)
+            }
+        } catch (err) {
+            console.error("Pixel Error:", err)
+        }
+
+        // 2. Update UI
         console.log("✅ PAYMENT CONFIRMED! Initializing Success State...")
         setActivating(false)
         setStep('success')
         await refreshProfile()
-
-        // 🎵 TikTok Pixel: Purchase
-        // Remove everything that is not digit, comma or dot
-        const cleanPrice = plan.price.replace(/[^\d,.]/g, '').replace(',', '.')
-        const numericPrice = parseFloat(cleanPrice)
-
-        console.log(`[DEBUG] Price Parsing: Original "${plan.price}" -> Clean "${cleanPrice}" -> Number ${numericPrice}`)
-
-        if (!isNaN(numericPrice)) {
-            tkPurchase(numericPrice, transactionId || pixData?.id)
-        } else {
-            alert(`[DEBUG] Falha ao ler preço: ${plan.price}`)
-        }
     }
 
     // =========================================================
