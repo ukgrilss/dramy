@@ -2,12 +2,18 @@ import { Link } from 'react-router-dom'
 import { Check, Shield, Zap, Play } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import TrialPromoPopup from '@/components/TrialPromoPopup'
+import SEO from '@/components/SEO'
 
 export default function LandingPage() {
     const { user } = useAuth()
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-pink-500 selection:text-white">
+            <SEO
+                title="Experimente Grátis - Dramas e Novelas"
+                description="Comece seu teste grátis no Dramy! Assista doramas, novelas asiáticas e séries exclusivas. Cancele quando quiser."
+                keywords={["teste grátis dorama", "assistir novalinhas grátis", "promoção dorama", "dramy grátis"]}
+            />
             <TrialPromoPopup />
             {/* Header / Nav */}
             <nav className="fixed top-0 w-full z-50 bg-[#0a0a0a]/80 backdrop-blur-lg border-b border-white/5">

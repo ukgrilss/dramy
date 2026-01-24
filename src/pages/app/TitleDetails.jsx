@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Play, Star, Clock, Mic, Info, ArrowLeft, Heart, Share2, Check } from 'lucide-react'
+import SEO from '@/components/SEO'
 
 export default function TitleDetails() {
     const { id } = useParams()
@@ -175,6 +176,12 @@ export default function TitleDetails() {
 
     return (
         <div className="min-h-screen bg-[#050505] text-white font-sans">
+            <SEO
+                title={title.title}
+                description={title.description}
+                image={title.poster_url}
+                keywords={[title.title, title.genre, "assistir online", "hd", "dramy"]}
+            />
             {/* Header/Nav */}
             <div className="fixed top-0 left-0 w-full p-6 flex justify-between items-center z-50 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
                 <button onClick={() => navigate(-1)} className="pointer-events-auto p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all backdrop-blur-md">

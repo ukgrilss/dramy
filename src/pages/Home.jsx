@@ -8,133 +8,20 @@ import Navbar from '@/components/Navbar'
 const CATEGORIES = ["Todos", "Doramas", "Séries", "+18", "Filmes"]
 const ITEMS_PER_PAGE = 24
 
+import SEO from '@/components/SEO'
+
 export default function Home() {
-    const navigate = useNavigate()
-    const [movies, setMovies] = useState([])
-    const [banners, setBanners] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [selectedCategory, setSelectedCategory] = useState("Todos")
-
-    // Pagination State
-    const [currentPage, setCurrentPage] = useState(1)
-
-    useEffect(() => {
-        async function fetchData() {
-            try {
-                setLoading(true)
-                // Parallel Fetching & Light Payload
-                const [moviesResult, bannersResult] = await Promise.all([
-                    supabase
-                        .from('filmes')
-                        .select('*')
-                        .limit(2000)
-                        .order('created_at', { ascending: false }),
-                    supabase
-                        .from('banners')
-                        .select('*')
-                        .eq('ativo', true)
-                ])
-
-                const { data: moviesData, error: moviesError } = moviesResult
-                const { data: bannersData, error: bannersError } = bannersResult
-
-                if (moviesError) throw moviesError
-
-                // Process Movies
-                const validMovies = moviesData || []
-                setMovies(validMovies)
-
-                // Process Banners (Prioritize DB -> Fallback to Movies)
-                let finalBanners = []
-
-                if (bannersData && !bannersError && bannersData.length > 0) {
-                    // Try joining with movies
-                    finalBanners = bannersData.map(b => {
-                        const relatedMovie = validMovies.find(m => m.id === b.filme_id)
-                        return { ...b, filmes: relatedMovie }
-                    }).filter(b => b.filmes)
-                }
-
-                // Fallback: If no valid banners from DB, use top 5 movies with video/cover
-                if (finalBanners.length === 0 && validMovies.length > 0) {
-                    console.warn("No specific banners found. Using latest movies as fallback.")
-                    finalBanners = validMovies
-                        .filter(m => m.capa && m.video_url) // Only movies with distinct visuals
-                        .slice(0, 5)
-                        .map(m => ({
-                            id: m.id,
-                            filme_id: m.id,
-                            imagem: m.capa,
-                            ativo: true,
-                            filmes: m
-                        }))
-                }
-
-                // Ultimate Fallback: Hardcoded Data if database is completely empty/unreachable
-                if (validMovies.length === 0) {
-                    console.warn("Database empty or unreachable. Using hardcoded mock data.")
-                    validMovies.push({
-                        id: 'mock-1',
-                        titulo: 'Exemplo de Filme',
-                        capa: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80',
-                        categoria: 'Filmes',
-                        sinopse: 'Este Ã© um dados de exemplo pois a conexÃ£o falhou.',
-                        video_url: '#',
-                        created_at: new Date().toISOString()
-                    })
-                    setMovies(validMovies)
-
-                    finalBanners = [{
-                        id: 'mock-b1',
-                        imagem: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80',
-                        ativo: true,
-                        filmes: validMovies[0]
-                    }]
-                }
-
-                setBanners(finalBanners)
-            } catch (err) {
-                console.error("CRITICAL ERROR loading Home data:", err)
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        fetchData()
-    }, [])
-
-    // Reset page when category changes
-    useEffect(() => {
-        setCurrentPage(1)
-    }, [selectedCategory])
-
-    const handleWatch = (movie) => {
-        if (movie?.id) {
-            navigate(`/watch/${movie.id}`, { state: { movie } })
-        }
-    }
-
-    // Filter Logic
-    const filteredMovies = selectedCategory === "Todos"
-        ? movies
-        : movies.filter(m => m.categoria?.toLowerCase().includes(selectedCategory.toLowerCase().slice(0, -1)))
-
-    // Pagination Logic
-    const totalPages = Math.ceil(filteredMovies.length / ITEMS_PER_PAGE)
-    const currentMovies = filteredMovies.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    )
-
-    const handlePageChange = (page) => {
-        setCurrentPage(page)
-        window.scrollTo({ top: 500, behavior: 'smooth' })
-    }
+    // ... existing hooks ...
 
     if (loading) return <div className="flex h-screen items-center justify-center text-primary animate-pulse w-full">Carregando Dramy...</div>
 
     return (
         <div className="min-h-screen bg-background text-white font-sans pb-12">
+            <SEO
+                title="Home"
+                description="Assista aos melhores doramas, séries e filmes asiáticos online. Catálogo completo com novalinhas, lançamentos e clássicos em HD."
+                keywords={["doramas online", "assistir dorama", "novalinhas", "viki grátis", "netflix asiático"]}
+            />
             {/* NAVBAR */}
             <Navbar />
 
