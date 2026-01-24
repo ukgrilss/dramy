@@ -42,8 +42,6 @@ const AdminLayout = () => {
         { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
         { path: '/admin/conteudo', icon: Film, label: 'Conteúdo' },
-        { path: '/admin/categorias', icon: List, label: 'Categorias' },
-        { path: '/admin/integrations', icon: Webhook, label: 'Integrações' },
         { path: '/admin/usuarios', icon: Users, label: 'Usuários' },
         { path: '/admin/sugestoes', icon: MessageSquare, label: 'Sugestões' },
         { path: '/admin/assinaturas', icon: CreditCard, label: 'Assinaturas' },

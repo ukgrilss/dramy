@@ -26,6 +26,21 @@ const Dashboard = () => {
 
     const fetchStats = async () => {
         try {
+            const now = new Date()
+            let startDate = new Date()
+
+            // Calculate start date based on timeRange
+            switch (timeRange) {
+                case '24h': startDate.setDate(now.getDate() - 1); break;
+                case '7d': startDate.setDate(now.getDate() - 7); break;
+                case '30d': startDate.setDate(now.getDate() - 30); break;
+                case '90d': startDate.setDate(now.getDate() - 90); break;
+                case '12m': startDate.setFullYear(now.getFullYear() - 1); break;
+                default: startDate.setDate(now.getDate() - 7);
+            }
+
+            const startDateStr = startDate.toISOString()
+
             // Fetch users count
             const { count: usersCount } = await supabase
                 .from('profiles')
@@ -37,12 +52,18 @@ const Dashboard = () => {
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'active')
 
+            // Fetch NEW subscriptions in range
+            const { count: newSubsCount } = await supabase
+                .from('subscriptions')
+                .select('*', { count: 'exact', head: true })
+                .gte('created_at', startDateStr)
+
             // Fetch content count
             const { count: moviesCount } = await supabase
                 .from('series')
                 .select('*', { count: 'exact', head: true })
 
-            // Fetch Subscriptions grouped by plan
+            // Fetch Subscriptions grouped by plan (Active items only) to calculate MRR
             const { data: activeSubscriptions } = await supabase
                 .from('subscriptions')
                 .select('plan')
@@ -63,7 +84,7 @@ const Dashboard = () => {
             })
 
             const PRICES = {
-                'monthly': 9.99,    // VIP Mensal - R$ 9,99
+                'monthly': 9.99,    // VIP Mensal - R$ 9,99 (Corrected back to match screenshot)
                 'annual': 59.90,    // Família Anual - R$ 59,90
                 'quarterly': 27.90, // Trimestral - R$ 27,90
                 'lifetime': 97.90   // Vitalício - R$ 97,90
@@ -79,7 +100,7 @@ const Dashboard = () => {
                 activeSubs: subsCount || 0,
                 totalContent: moviesCount || 0,
                 mrr: totalMrr,
-                newSubs: 0, // Real data only
+                newSubs: newSubsCount || 0,
                 renewals: 0,
                 churnRate: 0,
                 planPerformance: [
