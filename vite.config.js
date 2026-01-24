@@ -10,7 +10,16 @@ export default defineConfig({
         },
     },
     build: {
-        sourcemap: false, // Disable source maps in production (CVE-2025-DRAMY-008)
+        sourcemap: false,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vendor: ['react', 'react-dom', 'react-router-dom'],
+                    supabase: ['@supabase/supabase-js'],
+                    ui: ['lucide-react', 'sonner']
+                }
+            }
+        }
     },
     server: {
         proxy: {
