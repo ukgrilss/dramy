@@ -59,7 +59,7 @@ export default function ContentManagement() {
 
             while (hasMore) {
                 const { data, error } = await supabase
-                    .from('series')
+                    .from('filmes')
                     .select('*')
                     .range(page * pageSize, (page + 1) * pageSize - 1)
                     .order('created_at', { ascending: false })
@@ -69,30 +69,28 @@ export default function ContentManagement() {
                 if (data.length > 0) {
                     allData = [...allData, ...data]
                     page++
-                    // If we got fewer than pageSize, we reached the end
-                    if (data.length < pageSize) {
-                        hasMore = false
-                    }
+                    if (data.length < pageSize) hasMore = false
                 } else {
                     hasMore = false
                 }
             }
 
-            // Map English DB columns to Portuguese UI state
+            // Map DB columns to UI state
+            // Filmes table uses: titulo, descricao, capa, banner_url, video_url, categoria, ano, nota, duracao, premium, featured
             const mappedContent = (allData || []).map(item => ({
                 id: item.id,
-                titulo: item.title,
-                descricao: item.description,
-                capa: item.poster_url,
-                banner: item.banner_url || item.poster_url,
-                video_url: 'N/A', // Series don't have a single video_url usually
-                category_id: null, // Need to join?
-                categoria: item.genre || 'Série', // Use genre or default
-                ano: item.release_year,
-                nota: item.rating,
-                duracao: item.duration,
-                premium: false, // Default to false if not in DB
-                featured: item.status === 'upcoming' // Map status to featured logic or default
+                titulo: item.titulo,
+                descricao: item.descricao,
+                capa: item.capa,
+                banner: item.banner_url || item.capa,
+                video_url: item.video_url,
+                category_id: item.category_id,
+                categoria: item.categoria || 'Geral',
+                ano: item.ano,
+                nota: item.nota,
+                duracao: item.duracao, // Make sure columns exist
+                premium: item.premium || false,
+                featured: item.featured || false
             }))
 
             setContent(mappedContent)
@@ -139,19 +137,20 @@ export default function ContentManagement() {
         setSaving(true)
         try {
             const { error } = await supabase
-                .from('series')
+                .from('filmes')
                 .insert([{
-                    title: formData.titulo,
-                    description: formData.descricao,
-                    genre: formData.categoria,
-                    poster_url: formData.capa || 'https://via.placeholder.com/300x450',
+                    titulo: formData.titulo,
+                    descricao: formData.descricao,
+                    categoria: formData.categoria,
+                    capa: formData.capa || 'https://via.placeholder.com/300x450',
                     banner_url: formData.banner || formData.capa,
-                    // video_url: formData.video_url, // API doesn't support video_url on series
-                    // premium: formData.premium, // API check
-                    status: formData.featured ? 'upcoming' : 'ongoing',
-                    release_year: formData.ano,
-                    rating: formData.nota,
-                    duration: formData.duracao // API expects integer? Passing as is for now if compatible or will error
+                    video_url: formData.video_url,
+                    premium: formData.premium,
+                    featured: formData.featured,
+                    ano: formData.ano,
+                    nota: formData.nota,
+                    duracao: formData.duracao
+                    // video_provider: 'custom' or 'bunny' could be set here
                 }])
 
             if (error) throw error
@@ -175,10 +174,7 @@ export default function ContentManagement() {
                 categoria: ''
             })
 
-            // Refresh content list
             fetchContent()
-
-            // Switch to manage tab
             setActiveTab('manage')
         } catch (error) {
             console.error('Error adding content:', error)
@@ -199,19 +195,19 @@ export default function ContentManagement() {
         setSaving(true)
         try {
             const { error } = await supabase
-                .from('series')
+                .from('filmes')
                 .update({
-                    title: editingContent.titulo,
-                    description: editingContent.descricao,
-                    genre: editingContent.categoria,
-                    poster_url: editingContent.capa,
+                    titulo: editingContent.titulo,
+                    descricao: editingContent.descricao,
+                    categoria: editingContent.categoria,
+                    capa: editingContent.capa,
                     banner_url: editingContent.banner,
-                    // video_url: editingContent.video_url,
-                    // premium: editingContent.premium,
-                    // featured: editingContent.featured,
-                    release_year: editingContent.ano,
-                    rating: editingContent.nota,
-                    duration: editingContent.duracao
+                    video_url: editingContent.video_url,
+                    premium: editingContent.premium,
+                    featured: editingContent.featured,
+                    ano: editingContent.ano,
+                    nota: editingContent.nota,
+                    duracao: editingContent.duracao
                 })
                 .eq('id', editingContent.id)
 
@@ -264,7 +260,7 @@ export default function ContentManagement() {
 
         try {
             const { error } = await supabase
-                .from('series')
+                .from('filmes')
                 .delete()
                 .eq('id', id)
 
