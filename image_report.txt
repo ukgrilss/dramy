@@ -1,0 +1,67 @@
+IMAGE DIAGNOSIS REPORT - 16 ISSUES FOUND
+=================================================
+
+[ERROR HTTPSConnectionPool(host='leftsuzgaasmbkabldoz.supabase.co', port=443): Read timed out. (read timeout=3)] LAPD! ABRA SEU CORAÇÃO! 
+URI: https://leftsuzgaasmbkabldoz.supabase.co/storage/v1/object/public/capas/0.22573613914046664.jpg
+ID: eea13aab-0ef3-4788-9768-0466c8311991
+
+[HTTP 429] A Nerd Dele
+URI: https://i.imgur.com/qabEBdO.png
+ID: 6bc898d0-596f-43c7-bd83-86caf7d8a6a9
+
+[HTTP 429] Cláusula Proibida
+URI: https://i.imgur.com/kAVfCyK.png
+ID: 794d337c-d4c4-4716-ac28-8d973a661773
+
+[NULL/EMPTY] BABY DADDY THAT'S NOT YOUR KID!
+URI: None
+ID: 308a5428-186b-45d3-81b2-a0511b216b13
+
+[HTTP 400] Sou Nada Mais Que Um Mortal
+URI: https://bushotizgnzejxaqovjy.supabase.co/storage/v1/object/public/images/dramas/covers/25552609-2049-43c3-9c6f-ea468e96acdc_pt.webp
+ID: c18a8040-e1de-49ad-bfc9-d52d80485f1f
+
+[HTTP 400] QUANDO MEU EX SE TORNA MEU GINECOLOGISTA
+URI: https://bushotizgnzejxaqovjy.supabase.co/storage/v1/object/public/images/dramas/covers/ce903ac1-cad4-4402-9014-d83abf63f7e6_pt.jpg
+ID: 966d2265-bb0c-4e01-8f6d-4983f337d31d
+
+[ERROR HTTPSConnectionPool(host='awscover.netshort.com', port=443): Max retries exceeded with url: /tos-vod-mya-v-da59d5a2040f5f77/coverG/prod/430423423_%E5%B0%91%E5%B9%B4%E5%89%91%E5%9C%A3%E8%91%A1.jpg~tplv-vod-rs:651:868.webp (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1077)')))] Jovem Santo Da Espada
+URI: https://awscover.netshort.com/tos-vod-mya-v-da59d5a2040f5f77/coverG/prod/430423423_%E5%B0%91%E5%B9%B4%E5%89%91%E5%9C%A3%E8%91%A1.jpg~tplv-vod-rs:651:868.webp
+ID: 2c6fdd30-452d-45c7-8ffc-db7e27ef0822
+
+[HTTP 429] Deusa Da Música
+URI: https://i.imgur.com/p4Uv1SA.png
+ID: 1a4b56e1-ee61-4adf-8ed0-f5df5d1e6e25
+
+[HTTP 400] O AMOR É UMA DANÇA PERIGOSA
+URI: https://bushotizgnzejxaqovjy.supabase.co/storage/v1/object/public/images/dramas/covers/6cc50a18-d297-4290-85ac-6bcb5af19ef8_pt.jpg
+ID: 12ac6096-0e7a-4f4e-ac63-650f25209be9
+
+[ERROR HTTPSConnectionPool(host='awscover.netshort.com', port=443): Max retries exceeded with url: /tos-vod-mya-v-da59d5a2040f5f77/imageG/prod/1894649954339090434/1747723896543-6088929681095573-3%E6%AF%944.jpg~tplv-vod-rs:651:868.webp (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1077)')))] Derruba A Familia Do descarado Com Minha Sogra
+URI: https://awscover.netshort.com/tos-vod-mya-v-da59d5a2040f5f77/imageG/prod/1894649954339090434/1747723896543-6088929681095573-3%E6%AF%944.jpg~tplv-vod-rs:651:868.webp
+ID: d9ead704-175e-4007-aa12-1eb9b036ad15
+
+[HTTP 400] Superando Meu Guarda Costas
+URI: https://bushotizgnzejxaqovjy.supabase.co/storage/v1/object/public/images/dramas/covers/2277bbb5-83da-4a2e-b003-4ea75f3d3e47_pt.jpeg
+ID: 97367b67-b592-4620-add2-b9955d993369
+
+[HTTP 400] Superando Meu guarda Costa
+URI: https://bushotizgnzejxaqovjy.supabase.co/storage/v1/object/public/images/dramas/covers/4a46e7aa-d64b-415b-b5b2-a363306af173_pt.jpeg
+ID: 7be859aa-0d54-4e96-ab46-5031f5c2dfb4
+
+[HTTP 429] Parece que a Nova Estagiária é a Esposa do CEO
+URI: https://i.imgur.com/aGGjfAl.png
+ID: 383acb0b-fc1f-455d-8d32-6797403b474d
+
+[HTTP 429] Segredos Do Coração
+URI: https://i.imgur.com/5lk2ypO.png
+ID: ed23ce7b-6f5a-472e-a682-12a8deed9cfb
+
+[HTTP 429] De Volta Pra Ela
+URI: https://i.imgur.com/axBOUgI.png
+ID: 318ced5d-64b1-4a7c-ab08-0f3d57f3f0e8
+
+[HTTP 429] Estaca No Coração
+URI: https://i.imgur.com/5qgK35z.png
+ID: 90ddf54c-8e20-47d7-86d4-58178ca898af
+

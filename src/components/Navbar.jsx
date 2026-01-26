@@ -35,12 +35,14 @@ export default function Navbar() {
             <nav className={`fixed top-0 z-50 w-full transition-all duration-300 ${isScrolled ? 'bg-black/80 backdrop-blur-xl border-b border-white/5' : 'bg-gradient-to-b from-black/80 to-transparent'}`}>
                 <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-8">
                     {/* Logo */}
-                    <Link to="/" className="flex items-center gap-2 group">
-                        <div className="relative">
-                            <div className="absolute -inset-2 bg-pink-500/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            <Clapperboard className="h-8 w-8 text-primary relative z-10" />
-                        </div>
-                        <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent group-hover:from-primary group-hover:to-purple-400 transition-all duration-300">
+                    {/* Logo (Image) */}
+                    <Link to="/" className="flex items-center gap-0 group py-2">
+                        <img
+                            src="/logo.png"
+                            alt="Dramy"
+                            className="h-10 md:h-14 w-auto object-contain drop-shadow-[0_0_25px_rgba(150,18,131,0.5)] transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent group-hover:from-primary group-hover:to-purple-400 transition-all duration-300 -ml-2 md:-ml-3">
                             Dramy
                         </span>
                     </Link>
