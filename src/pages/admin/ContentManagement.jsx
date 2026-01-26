@@ -279,7 +279,16 @@ export default function ContentManagement() {
             accessor: 'titulo',
             render: (value, row) => (
                 <div className="flex items-center gap-3">
-                    <img src={row.capa} alt={value} className="w-12 h-16 object-cover rounded" />
+                    {/* Debug: check if image loads */}
+                    <img
+                        src={row.capa}
+                        alt={value}
+                        className="w-12 h-16 object-cover rounded"
+                        onError={(e) => {
+                            console.error(`Failed to load image for: ${value}, URL: ${row.capa}`);
+                            e.target.style.display = 'none'; // Optional: hide if broken
+                        }}
+                    />
                     <div>
                         <p className="font-medium text-white">{value}</p>
                         <p className="text-xs text-gray-500">{row.categoria}</p>

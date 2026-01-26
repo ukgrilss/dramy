@@ -1,11 +1,23 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Play, ChevronRight, ChevronLeft, Clock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Hero from '@/components/Hero'
+import ImageWithFallback from '@/components/ImageWithFallback'
+
 
 const CATEGORIES = ["Todos", "Doramas", "Séries", "+18", "Filmes"]
 const ITEMS_PER_PAGE = 24
+
+// Utility: Fisher-Yates Shuffle for content rotation
+function shuffleArray(array) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
 
 export default function AppHome() {
     const navigate = useNavigate()
@@ -23,28 +35,40 @@ export default function AppHome() {
             setLoading(true)
 
             // 1. Fetch Series
-            const { data: seriesData, error } = await supabase
+            const { data: seriesData } = await supabase
                 .from('series')
                 .select('*')
-                .limit(2000)
+                .limit(1000)
                 .order('created_at', { ascending: false })
 
-            if (error) {
-                console.error("Error fetching series:", error)
-            }
+            // 1b. Fetch Filmes (Movies)
+            const { data: filmesData } = await supabase
+                .from('filmes')
+                .select('*')
+                .limit(1000)
+                .order('created_at', { ascending: false })
 
-            // Map series to expected 'movie' format
-            const mappedMovies = seriesData?.map(s => ({
-                id: s.id,
-                titulo: s.title,
-                capa: s.poster_url,
-                categoria: s.genre, // 'genre' column from series
-                descricao: s.description,
-                rating: s.rating,
-                // Add legacy fields if needed
-                video_url: null,
-                link: null
-            })) || []
+            // Map and Merge Content
+            const allContent = [
+                ...(seriesData || []).map(s => ({
+                    id: s.id,
+                    titulo: s.title,
+                    capa: s.poster_url,
+                    categoria: s.genre,
+                    descricao: s.description,
+                    rating: s.rating,
+                    type: 'series'
+                })),
+                ...(filmesData || []).map(f => ({
+                    id: f.id,
+                    titulo: f.titulo,
+                    capa: f.capa,
+                    categoria: f.categoria,
+                    descricao: f.descricao,
+                    rating: 0, // filmes might not have rating column
+                    type: 'movie'
+                }))
+            ]
 
             // 2. Fetch Banners
             const { data: bannersData, error: bannersError } = await supabase
@@ -56,7 +80,7 @@ export default function AppHome() {
 
             if (bannersData && bannersData.length > 0) {
                 const joinedBanners = bannersData.map(b => {
-                    const relatedItem = mappedMovies.find(m => m.id === b.filme_id)
+                    const relatedItem = allContent.find(m => m.id === b.filme_id)
                     return {
                         ...b,
                         filmes: relatedItem
@@ -65,9 +89,9 @@ export default function AppHome() {
                 finalBanners = joinedBanners
             }
 
-            // Fallback: If no banners, use top 5 series
-            if (finalBanners.length === 0 && mappedMovies.length > 0) {
-                finalBanners = mappedMovies.slice(0, 5).map(m => ({
+            // Fallback: If no banners, use top 5 items
+            if (finalBanners.length === 0 && allContent.length > 0) {
+                finalBanners = allContent.slice(0, 5).map(m => ({
                     id: m.id,
                     filme_id: m.id,
                     imagem: m.capa,
@@ -78,7 +102,7 @@ export default function AppHome() {
                 }))
             }
 
-            setMovies(mappedMovies)
+            setMovies(allContent)
             setBanners(finalBanners)
 
             // 3. Fetch Continue Watching History
@@ -147,6 +171,20 @@ export default function AppHome() {
         setCurrentPage(page)
         window.scrollTo({ top: 500, behavior: 'smooth' })
     }
+
+    // --- HOOKS MOVED TO TOP LEVEL TO FIX CRASH ---
+    const shuffledTrending = useMemo(() => shuffleArray([...movies]).slice(0, 40), [movies])
+    const newReleases = useMemo(() => movies.filter(m => m.categoria?.toLowerCase().includes('novo-lancamento') || m.titulo?.toLowerCase().includes('novo')).slice(0, 30), [movies])
+    const shuffledStartHere = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.includes('Curta') || m.rating > 4.5)), [movies])
+    const shuffledDubbed = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.toLowerCase().includes('dublado') || m.titulo?.toLowerCase().includes('dublado'))), [movies])
+    const shuffledRomance = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.match(/romance|amor|paixão/i))), [movies])
+    const shuffledVampires = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.toLowerCase().match(/vampiro|lobo|werewolf|sobrenatural|dracula/i))), [movies])
+    const shuffledIdentity = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.toLowerCase().match(/identidade|escondida|secreto|boss|chefe|ceo/i))), [movies])
+    const shuffledFamily = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.toLowerCase().match(/bebe|gravi|filho|baby|pregnant|mãe|pai/i))), [movies])
+    const shuffledTaboo = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.toLowerCase().match(/tabu|proibido|traição|vingança/i))), [movies])
+    const shuffledBLGL = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.toLowerCase().match(/bl|gl|lgbt|boys|girls/i))), [movies])
+    const shuffledDrama = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.match(/drama|vingança|mistério/i))), [movies])
+    const shuffledTopRated = useMemo(() => shuffleArray(movies.filter(m => m.rating >= 4.7)), [movies])
 
     if (loading) {
         return (
@@ -244,50 +282,98 @@ export default function AppHome() {
                         /* ================= CURATED SECTIONS VIEW (DRAG & DROP INFINITE SCROLL) ================= */
                         <div className="space-y-0 animate-in fade-in duration-700 pb-4">
 
-                            {/* SECTION: Trending */}
+                            {/* SECTION: Trending (Shuffled for variety) */}
                             <CuratedSection
                                 title="Em alta"
-                                items={movies} // Top items naturally first by logic/sort
+                                items={shuffledTrending}
                                 onWatch={handleWatch}
                                 titleSize="text-3xl md:text-5xl"
                             />
 
-                            {/* SECTION: Start Here (Filtered but passed full list) */}
+                            {/* SECTION: New Releases (Strict Order - Prioritize New Content) */}
+                            <CuratedSection
+                                title="Chegaram agora"
+                                items={newReleases}
+                                onWatch={handleWatch}
+                                titleSize="text-3xl md:text-5xl"
+                            />
+
+                            {/* SECTION: Start Here (Filtered & Shuffled can include shorter/high rated) */}
                             <CuratedSection
                                 title="Comece por aqui"
-                                items={movies.filter(m => m.categoria?.includes('Curta') || m.rating > 4.5)}
+                                items={shuffledStartHere}
                                 onWatch={handleWatch}
                                 titleSize="text-3xl md:text-5xl"
                             />
 
-                            {/* SECTION: Romance */}
+                            {/* Dublados (Shuffled) */}
+                            <CuratedSection
+                                title="Destaques Dublados"
+                                items={shuffledDubbed}
+                                onWatch={handleWatch}
+                                titleSize="text-3xl md:text-5xl"
+                            />
+
+                            {/* Romance (Shuffled) */}
                             <CuratedSection
                                 title="Romances intensos"
-                                items={movies.filter(m => m.categoria?.match(/romance|amor|paixão/i))}
+                                items={shuffledRomance}
                                 onWatch={handleWatch}
                                 titleSize="text-3xl md:text-5xl"
                             />
 
-                            {/* SECTION: Drama/Vingança */}
+                            {/* Lobos & Vampiros (Shuffled) */}
+                            <CuratedSection
+                                title="Lobos & Vampiros"
+                                items={shuffledVampires}
+                                onWatch={handleWatch}
+                                titleSize="text-3xl md:text-5xl"
+                            />
+
+                            {/* Identidade Escondida (Shuffled) */}
+                            <CuratedSection
+                                title="Segredos & Identidades"
+                                items={shuffledIdentity}
+                                onWatch={handleWatch}
+                                titleSize="text-3xl md:text-5xl"
+                            />
+
+                            {/* Bebês (Shuffled) */}
+                            <CuratedSection
+                                title="Herdeiros & Família"
+                                items={shuffledFamily}
+                                onWatch={handleWatch}
+                                titleSize="text-3xl md:text-5xl"
+                            />
+
+                            {/* Tabu (Shuffled) */}
+                            <CuratedSection
+                                title="Entre o Amor e o Proibido"
+                                items={shuffledTaboo}
+                                onWatch={handleWatch}
+                                titleSize="text-3xl md:text-5xl"
+                            />
+
+                            {/* BL & GL (Shuffled) */}
+                            <CuratedSection
+                                title="Amor Sem Barreiras (BL/GL)"
+                                items={shuffledBLGL}
+                                onWatch={handleWatch}
+                                titleSize="text-3xl md:text-5xl"
+                            />
+
+                            {/* Drama/Vingança (Shuffled) */}
                             <CuratedSection
                                 title="Histórias de poder"
-                                items={movies.filter(m => m.categoria?.match(/drama|vingança|mistério/i))}
+                                items={shuffledDrama}
                                 onWatch={handleWatch}
                                 titleSize="text-3xl md:text-5xl"
                             />
 
-                            {/* SECTION: New Episodes/Series (Offset slice to show different content) */}
-                            <CuratedSection
-                                title="Novos episódios"
-                                items={movies.slice(15)} // Simple offset to vary content 
-                                onWatch={handleWatch}
-                                titleSize="text-3xl md:text-5xl"
-                            />
-
-                            {/* SECTION: Top Rated */}
+                            {/* SECTION: Top Rated (High rating, Strict or Shuffled) */}
                             <CuratedSection
                                 title="Aclamados pela crítica"
-                                items={movies.filter(m => m.rating >= 4.7)}
+                                items={shuffledTopRated}
                                 onWatch={handleWatch}
                                 titleSize="text-3xl md:text-5xl"
                             />
@@ -305,141 +391,28 @@ export default function AppHome() {
 
                                 <div className="overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing">
                                     <div className="flex gap-2 px-3 pb-4">
-                                        {/* Column 1 */}
-                                        <div className="flex flex-col gap-2 min-w-[160px] md:min-w-[220px]">
-                                            {movies.slice(0, 4).map((movie) => (
-                                                <div
-                                                    key={movie.id}
-                                                    onClick={() => handleWatch(movie)}
-                                                    className="aspect-[2/3] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-xl"
-                                                >
-                                                    <img src={movie.capa} alt={movie.titulo} className="w-full h-full object-cover" loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Column 2 */}
-                                        <div className="flex flex-col gap-2 min-w-[160px] md:min-w-[220px]">
-                                            {movies.slice(4, 8).map((movie) => (
-                                                <div
-                                                    key={movie.id}
-                                                    onClick={() => handleWatch(movie)}
-                                                    className="aspect-[2/3] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-xl"
-                                                >
-                                                    <img src={movie.capa} alt={movie.titulo} className="w-full h-full object-cover" loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Column 3 */}
-                                        <div className="flex flex-col gap-2 min-w-[160px] md:min-w-[220px]">
-                                            {movies.slice(8, 12).map((movie) => (
-                                                <div
-                                                    key={movie.id}
-                                                    onClick={() => handleWatch(movie)}
-                                                    className="aspect-[2/3] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-xl"
-                                                >
-                                                    <img src={movie.capa} alt={movie.titulo} className="w-full h-full object-cover" loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Column 4 */}
-                                        <div className="flex flex-col gap-2 min-w-[160px] md:min-w-[220px]">
-                                            {movies.slice(12, 16).map((movie) => (
-                                                <div
-                                                    key={movie.id}
-                                                    onClick={() => handleWatch(movie)}
-                                                    className="aspect-[2/3] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-xl"
-                                                >
-                                                    <img src={movie.capa} alt={movie.titulo} className="w-full h-full object-cover" loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Column 5 */}
-                                        <div className="flex flex-col gap-2 min-w-[160px] md:min-w-[220px]">
-                                            {movies.slice(16, 20).map((movie) => (
-                                                <div
-                                                    key={movie.id}
-                                                    onClick={() => handleWatch(movie)}
-                                                    className="aspect-[2/3] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-xl"
-                                                >
-                                                    <img src={movie.capa} alt={movie.titulo} className="w-full h-full object-cover" loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Column 6 */}
-                                        <div className="flex flex-col gap-2 min-w-[160px] md:min-w-[220px]">
-                                            {movies.slice(20, 24).map((movie) => (
-                                                <div
-                                                    key={movie.id}
-                                                    onClick={() => handleWatch(movie)}
-                                                    className="aspect-[2/3] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-xl"
-                                                >
-                                                    <img src={movie.capa} alt={movie.titulo} className="w-full h-full object-cover" loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Column 7 */}
-                                        <div className="flex flex-col gap-2 min-w-[160px] md:min-w-[220px]">
-                                            {movies.slice(24, 28).map((movie) => (
-                                                <div
-                                                    key={movie.id}
-                                                    onClick={() => handleWatch(movie)}
-                                                    className="aspect-[2/3] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-xl"
-                                                >
-                                                    <img src={movie.capa} alt={movie.titulo} className="w-full h-full object-cover" loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Column 8 */}
-                                        <div className="flex flex-col gap-2 min-w-[160px] md:min-w-[220px]">
-                                            {movies.slice(28, 32).map((movie) => (
-                                                <div
-                                                    key={movie.id}
-                                                    onClick={() => handleWatch(movie)}
-                                                    className="aspect-[2/3] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-xl"
-                                                >
-                                                    <img src={movie.capa} alt={movie.titulo} className="w-full h-full object-cover" loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Column 9 */}
-                                        <div className="flex flex-col gap-2 min-w-[160px] md:min-w-[220px]">
-                                            {movies.slice(32, 36).map((movie) => (
-                                                <div
-                                                    key={movie.id}
-                                                    onClick={() => handleWatch(movie)}
-                                                    className="aspect-[2/3] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-xl"
-                                                >
-                                                    <img src={movie.capa} alt={movie.titulo} className="w-full h-full object-cover" loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Column 10 */}
-                                        <div className="flex flex-col gap-2 min-w-[160px] md:min-w-[220px]">
-                                            {movies.slice(36, 40).map((movie) => (
-                                                <div
-                                                    key={movie.id}
-                                                    onClick={() => handleWatch(movie)}
-                                                    className="aspect-[2/3] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-xl"
-                                                >
-                                                    <img src={movie.capa} alt={movie.titulo} className="w-full h-full object-cover" loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
+                                        {/* Column 1 to 10 - Simplified Rendering Loop could be better here but keeping structure */}
+                                        {[...Array(10)].map((_, colIndex) => (
+                                            <div key={colIndex} className="flex flex-col gap-2 min-w-[160px] md:min-w-[220px]">
+                                                {movies.slice(colIndex * 4, (colIndex + 1) * 4).map((movie) => (
+                                                    <div
+                                                        key={movie.id}
+                                                        onClick={() => handleWatch(movie)}
+                                                        className="aspect-[2/3] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-xl"
+                                                    >
+                                                        <ImageWithFallback
+                                                            src={movie.capa}
+                                                            alt={movie.titulo}
+                                                            className="w-full h-full object-cover"
+                                                            fallbackText={movie.titulo}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
-
-
-
                         </div>
                     ) : (
                         /* ================= GRID VIEW (FOR CATEGORIES) ================= */
@@ -506,6 +479,7 @@ export default function AppHome() {
                     )}
                 </div>
             </div>
+
         </div>
     )
 }
@@ -628,12 +602,12 @@ function CuratedSection({ title, items, onWatch, titleSize = "text-xl md:text-3x
                         >
                             {/* Card Image with enhanced depth */}
                             <div className="aspect-[2/3] w-full rounded-xl overflow-hidden relative shadow-[0_8px_30px_rgba(0,0,0,0.6)] bg-gray-900 border border-white/5 group-hover/card:border-primary/50 pointer-events-none transition-all duration-500 ease-out transform-style-3d group-hover/card:shadow-[0_20px_60px_rgba(150,18,131,0.4)] group-hover/card:-translate-y-2">
-                                <img
+                                <ImageWithFallback
                                     src={movie.capa}
                                     alt={movie.titulo}
                                     className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-110"
                                     loading="lazy"
-                                    draggable="false"
+                                    fallbackText={movie.titulo}
                                 />
                                 {/* Gradient Overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300"></div>
@@ -683,11 +657,12 @@ function MovieCardSimple({ movie, onClick }) {
             className="movie-card group relative cursor-pointer rounded-xl bg-gray-900 ring-1 ring-white/5 hover:ring-white/20 transition-all duration-300 active:scale-95 transform-style-3d hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(150,18,131,0.3)] animate-cinematic"
         >
             <div className="aspect-[2/3] w-full relative overflow-hidden rounded-xl">
-                <img
+                <ImageWithFallback
                     src={movie.capa}
                     alt={movie.titulo}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                     loading="lazy"
+                    fallbackText={movie.titulo}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 

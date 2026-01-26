@@ -78,7 +78,7 @@ def generate_sql():
                     continue
 
                 description = item.get('synopsis_pt') or item.get('synopsis_en') or item.get('description')
-                poster = item.get('cover_url') or item.get('cover_img') or item.get('poster_url') 
+                poster = item.get('cover_image_url_pt') or item.get('cover_image_url_en') or item.get('cover_url') or item.get('cover_img') or item.get('poster_url') 
                 category = item.get('genre') or "Drama"
                 created_at = item.get('created_at') or datetime.now().isoformat()
                 

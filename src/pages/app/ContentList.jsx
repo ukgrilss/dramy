@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { Play, Search, Loader2 } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { sanitizeInput } from '@/utils/sanitize'
+import ImageWithFallback from '@/components/ImageWithFallback'
 
 export default function ContentList() {
     const navigate = useNavigate()
@@ -21,28 +22,47 @@ export default function ContentList() {
         async function fetchData() {
             setLoading(true)
 
-            // Client-side filtering strategy (same as before to keep logic safe)
-            // Fetching a large batch is fine for this scale (~2000 items)
-            const { data: seriesData, error } = await supabase
+            // 1. Fetch Series
+            const { data: seriesData, error: seriesError } = await supabase
                 .from('series')
                 .select('*')
-                .limit(2000)
+                .limit(1000)
                 .order('created_at', { ascending: false })
 
-            if (error) {
-                console.error("Error fetching series:", error)
-            }
+            if (seriesError) console.error("Error fetching series:", seriesError)
 
-            const mappedMovies = seriesData?.map(s => ({
-                id: s.id,
-                titulo: s.title,
-                capa: s.poster_url,
-                categoria: s.genre,
-                descricao: s.description,
-                rating: s.rating
-            })) || []
+            // 2. Fetch Filmes
+            const { data: filmesData, error: filmesError } = await supabase
+                .from('filmes')
+                .select('*')
+                .limit(1000)
+                .order('created_at', { ascending: false })
 
-            setMovies(mappedMovies)
+            if (filmesError) console.error("Error fetching filmes:", filmesError)
+
+            // Merge Content
+            const allContent = [
+                ...(seriesData || []).map(s => ({
+                    id: s.id,
+                    titulo: s.title,
+                    capa: s.poster_url,
+                    categoria: s.genre,
+                    descricao: s.description,
+                    rating: s.rating,
+                    type: 'series'
+                })),
+                ...(filmesData || []).map(f => ({
+                    id: f.id,
+                    titulo: f.titulo,
+                    capa: f.capa,
+                    categoria: f.categoria,
+                    descricao: f.descricao,
+                    rating: 0,
+                    type: 'movie'
+                }))
+            ]
+
+            setMovies(allContent)
             setLoading(false)
         }
         fetchData()
@@ -139,11 +159,11 @@ export default function ContentList() {
                                     className="group relative cursor-pointer overflow-hidden rounded-xl bg-gray-900 ring-1 ring-white/5 hover:ring-white/20 transition-all duration-200 active:scale-95 hover:shadow-xl"
                                 >
                                     <div className="aspect-[2/3] w-full relative overflow-hidden rounded-xl">
-                                        <img
+                                        <ImageWithFallback
                                             src={movie.capa}
                                             alt={movie.titulo}
                                             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                            loading="lazy"
+                                            fallbackText={movie.titulo}
                                         />
 
                                         {/* Overlay & Play Icon */}
