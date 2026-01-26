@@ -38,14 +38,14 @@ export default function AppHome() {
             const { data: seriesData } = await supabase
                 .from('series')
                 .select('*')
-                .limit(1000)
+                .limit(3000)
                 .order('created_at', { ascending: false })
 
             // 1b. Fetch Filmes (Movies)
             const { data: filmesData } = await supabase
                 .from('filmes')
                 .select('*')
-                .limit(1000)
+                .limit(3000)
                 .order('created_at', { ascending: false })
 
             // Map and Merge Content
@@ -66,7 +66,8 @@ export default function AppHome() {
                     categoria: f.categoria,
                     descricao: f.descricao,
                     rating: 0, // filmes might not have rating column
-                    type: 'movie'
+                    type: 'movie',
+                    is_dubbed: f.is_dubbed // Database column
                 }))
             ]
 
@@ -176,7 +177,7 @@ export default function AppHome() {
     const shuffledTrending = useMemo(() => shuffleArray([...movies]).slice(0, 40), [movies])
     const newReleases = useMemo(() => movies.filter(m => m.categoria?.toLowerCase().includes('novo-lancamento') || m.titulo?.toLowerCase().includes('novo')).slice(0, 30), [movies])
     const shuffledStartHere = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.includes('Curta') || m.rating > 4.5)), [movies])
-    const shuffledDubbed = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.toLowerCase().includes('dublado') || m.titulo?.toLowerCase().includes('dublado'))), [movies])
+    const shuffledDubbed = useMemo(() => shuffleArray(movies.filter(m => m.is_dubbed || m.categoria?.toLowerCase().includes('dublado') || m.titulo?.toLowerCase().includes('dublado'))), [movies])
     const shuffledRomance = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.match(/romance|amor|paixão/i))), [movies])
     const shuffledVampires = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.toLowerCase().match(/vampiro|lobo|werewolf|sobrenatural|dracula/i))), [movies])
     const shuffledIdentity = useMemo(() => shuffleArray(movies.filter(m => m.categoria?.toLowerCase().match(/identidade|escondida|secreto|boss|chefe|ceo/i))), [movies])
