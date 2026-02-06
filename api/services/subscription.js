@@ -17,11 +17,11 @@ export const activateSubscription = async (supabase, email, planSlug, transactio
         .select('id')
         .eq('email', email)
         .single()
-    
+
     // If not in profiles, try auth.users via admin? No, we can't access auth.users directly via client 
     // unless we use service_role and auth.admin.listUsers usually.
     // BUT we passed the 'supabase' client which should be initialized with SERVICE_ROLE_KEY.
-    
+
     let userId = userData?.id
 
     if (!userId) {
@@ -77,8 +77,8 @@ export const activateSubscription = async (supabase, email, planSlug, transactio
             subscription_active: true,
             plan_atual: planSlug,
             plan_status: 'active',
-            plan_expira_em: expiresAt,
-            updated_at: new Date()
+            plan_expira_em: expiresAt
+            // updated_at: new Date() // Column might be missing in older schemas
         })
         .eq('id', userId)
 

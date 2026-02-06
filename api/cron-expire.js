@@ -35,7 +35,7 @@ export default async function handler(req, res) {
             .update({
                 subscription_active: false,
                 plan_status: 'expired',
-                updated_at: now
+                // updated_at: now
             })
             .eq('subscription_active', true)
             .lt('plan_expira_em', now)
