@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { activateSubscription } from './services/subscription.js'
 
 // Helper to sanitize env vars
 const getEnv = (key) => {
@@ -108,24 +109,20 @@ export default async function handler(req, res) {
             if (userEmail) {
                 console.log(`[CheckPayment] Unlocking user: ${userEmail}`)
 
-                // FORCE APPROVAL via RPC
-                const { error: rpcError } = await supabase.rpc('handle_payment_webhook', {
-                    p_email: userEmail,
-                    p_plan_slug: planSlug,
-                    p_transaction_id: transaction_id
-                })
-
-                if (rpcError) {
-                    console.error("RPC Failed:", rpcError)
+                // FORCE APPROVAL via Direct Service
+                try {
+                    await activateSubscription(supabase, userEmail, planSlug, transaction_id)
+                } catch (subError) {
+                    console.error("Activation Failed:", subError)
                     // Log to Supabase for debugging
                     await supabase.from('integration_logs').insert({
-                        integration_name: 'database_rpc_fail',
-                        event_name: 'rpc_error',
+                        integration_name: 'payment_activation_fail',
+                        event_name: 'service_error',
                         status: 'error',
-                        payload: { error: rpcError, email: userEmail, transaction_id },
+                        payload: { error: subError, email: userEmail, transaction_id },
                         created_at: new Date()
                     })
-                    throw new Error(`RPC Error: ${rpcError.message} (${rpcError.code})`)
+                    throw new Error(`Activation Error: ${subError.message}`)
                 }
 
                 return res.status(200).json({ status: 'paid', approved: true })

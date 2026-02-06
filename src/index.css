@@ -37,6 +37,18 @@ body {
     color: #fafafa;
     font-family: 'Urbanist', sans-serif;
     overflow-x: hidden;
+    /* Native App Feel Optimizations */
+    -webkit-tap-highlight-color: transparent; /* Remove grey tap highlight */
+    -webkit-touch-callout: none; /* Disable long-press menu */
+    user-select: none; /* Disable text selection */
+    overscroll-behavior-y: none; /* Disable "pull-to-refresh" rubber banding */
+    touch-action: manipulation; /* Improve click responsiveness */
+}
+
+/* Allow selection on inputs only */
+input, textarea {
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 /* FIX: Browser Autofill Styles */

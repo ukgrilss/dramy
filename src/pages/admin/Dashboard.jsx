@@ -15,13 +15,20 @@ const Dashboard = () => {
         newSubs: 0,
         renewals: 0,
         churnRate: 0,
+        expiredSubs: 0, // NEW
         planPerformance: []
     })
     const [loading, setLoading] = useState(true)
     const [timeRange, setTimeRange] = useState('7d')
 
     useEffect(() => {
-        fetchStats()
+        // Lazy expiration check: Update database before fetching stats
+        fetch('/api/cron-expire')
+            .then(() => fetchStats())
+            .catch((err) => {
+                console.error('Expire trigger failed', err)
+                fetchStats() // Fetch anyway
+            })
     }, [timeRange])
 
     const fetchStats = async () => {
@@ -67,7 +74,18 @@ const Dashboard = () => {
             const { data: activeSubscriptions } = await supabase
                 .from('subscriptions')
                 .select('plan')
+                .select('plan')
                 .eq('status', 'active')
+
+            // Fetch EXPIRED subscriptions (last 30 days)
+            const thirtyDaysAgo = new Date()
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+            const { count: expiredCount } = await supabase
+                .from('subscriptions')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'expired')
+                .gte('expires_at', thirtyDaysAgo.toISOString())
 
             // Calculate aggregations
             const planCounts = {
@@ -103,6 +121,7 @@ const Dashboard = () => {
                 newSubs: newSubsCount || 0,
                 renewals: 0,
                 churnRate: 0,
+                expiredSubs: expiredCount || 0,
                 planPerformance: [
                     { name: 'Plano VIP (Mensal)', count: planCounts.monthly, revenue: planCounts.monthly * PRICES.monthly },
                     { name: 'Plano Família (Anual)', count: planCounts.annual, revenue: planCounts.annual * PRICES.annual },
@@ -275,7 +294,7 @@ const Dashboard = () => {
                             </div>
                         </div>
                         <div className="mb-6">
-                            <span className="text-3xl font-bold text-white">12</span>
+                            <span className="text-3xl font-bold text-white">{stats.expiredSubs}</span>
                             <span className="text-sm text-gray-500 ml-2">expirados</span>
                         </div>
                         <button className="w-full py-2.5 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl text-sm font-medium text-primary transition-all">

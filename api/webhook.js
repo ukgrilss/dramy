@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { sendUtmifyOrder, formatStatsDate } from './services/utmify.js'
+import { activateSubscription } from './services/subscription.js'
 
 export default async function handler(req, res) {
     if (req.method === 'GET') {
@@ -67,18 +68,19 @@ export default async function handler(req, res) {
         }
 
         // 2. Approve Access (Set subscription_active = true)
-        const { error: rpcError } = await supabase.rpc('handle_payment_webhook', {
-            p_email: intent.email,
-            p_plan_slug: intent.plan_slug || 'monthly',
-            p_transaction_id: payload.id || intentId
-        })
-
-        if (rpcError) {
-            console.error('[Webhook] RPC Error:', rpcError)
+        // REPLACED RPC WITH DIRECT SERVICE CALL
+        try {
+            await activateSubscription(
+                supabase,
+                intent.email,
+                intent.plan_slug || 'monthly',
+                payload.id || intentId
+            )
+            console.log('[Webhook] Access Approved for:', intent.email)
+        } catch (subError) {
+            console.error('[Webhook] Activation Error:', subError)
             return res.status(500).json({ error: 'approval_failed' })
         }
-
-        console.log('[Webhook] Access Approved for:', intent.email)
 
         // 3. Notify Utmify (Server-side Purchase Event)
         if (process.env.UTMIFY_API_KEY) {
