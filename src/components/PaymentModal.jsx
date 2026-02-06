@@ -175,6 +175,8 @@ export default function PaymentModal({ plan, onClose }) {
             // Create PIX charge with server-validated amount
             const payerName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Cliente'
 
+            const payerEmail = email || user?.email || 'cliente@dramy.com.br'
+
             // Revert direct fetch call back to PushinPay (which now points to SyncPay service via create-pix.js)
             // But wait, the previous code used PushinPay.createPixCharge.
             // AND the user wants to use SyncPay.
@@ -191,7 +193,7 @@ export default function PaymentModal({ plan, onClose }) {
                     metadata: { intent_id },
                     payer: {
                         name: payerName,
-                        email: email || user.email,
+                        email: payerEmail,
                         // NO DOCUMENT PASSED - Backend will auto-generate
                     }
                 })

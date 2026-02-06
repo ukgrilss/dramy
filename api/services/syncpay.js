@@ -90,7 +90,7 @@ export const SyncPayService = {
             client: {
                 name: payer.name || 'Cliente Dramy',
                 cpf: safeCpf,
-                email: payer.email,
+                email: payer.email || 'noreply@dramy.com.br',
                 phone: payer.phone ? payer.phone.replace(/\D/g, '') : '11999999999'
             }
         }
