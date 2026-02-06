@@ -49,15 +49,24 @@ export const SyncPayService = {
     async createPix({ amount, description, payer, webhookUrl }) {
         const token = await this.getToken()
 
+        // Validate Payer Data
+        const rawCpf = payer.document || payer.cpf || ''
+        const safeCpf = rawCpf.replace(/\D/g, '')
+
+        if (!safeCpf) {
+            console.error('[SyncPay] Missing CPF for user:', payer.email)
+            throw new Error('CPF é obrigatório para o pagamento.')
+        }
+
         const payload = {
             amount: parseFloat(amount),
             description: description || 'Dramy Subscription',
             webhook_url: webhookUrl,
             client: {
                 name: payer.name || 'Cliente Dramy',
-                cpf: payer.document.replace(/\D/g, ''), // Numbers only
+                cpf: safeCpf,
                 email: payer.email,
-                phone: payer.phone ? payer.phone.replace(/\D/g, '') : '11999999999' // Fallback if missing? API requires it.
+                phone: payer.phone ? payer.phone.replace(/\D/g, '') : '11999999999'
             }
         }
 
