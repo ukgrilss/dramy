@@ -18,104 +18,86 @@ export default async function handler(req, res) {
         )
 
         const payload = req.body
-        console.log('[Webhook] Received Payload:', JSON.stringify(payload, null, 2))
+        console.log('[Webhook] Received:', JSON.stringify(payload, null, 2))
 
-        // 🚨 TRACE LOG: Log raw entry to DB to prove we received it
-        try {
-            await supabase.from('integration_logs').insert({
-                integration_name: 'webhook_debug',
-                event_name: 'payload_received',
-                status: 'info',
-                payload: payload,
-                created_at: new Date()
-            })
-        } catch (logErr) {
-            console.error('Failed to log to DB:', logErr)
+        // SyncPay Payload Format: { data: { id, status, client... } }
+        const data = payload.data || payload // Handle checking nested data or root
+
+        if (!data || !data.id) {
+            return res.status(200).json({ error: 'invalid_payload' })
         }
 
-        // PushinPay Status
-        const status = payload.status
-        const isPaid = status === 'paid' || status === 'approved'
+        const transactionId = data.id
+        const status = data.status // 'completed', 'paid', 'pending'
+
+        const isPaid = status === 'completed' || status === 'paid'
 
         if (!isPaid) {
-            console.log('[Webhook] Ignored status:', status)
+            console.log(`[Webhook] Ignored status: ${status} for ${transactionId}`)
             return res.status(200).json({ ignored: true, status })
         }
 
-        // Extract Intent ID (Metadata)
-        const intentId = payload.metadata?.intent_id || payload.metadata?.intention_id
+        console.log(`[Webhook] Processing Payment: ${transactionId}`)
 
-        if (!intentId) {
-            console.error('[Webhook] Missing intent_id in metadata')
-            // Don't error out, maybe we can find by transaction_id?
-            // But for now, we rely on metadata we sent.
-            return res.status(200).json({ error: 'partial_data' })
-        }
-
-        console.log('[Webhook] Processing Payment for Intent:', intentId)
-
-        // 1. Get Payment Intent from DB
+        // 1. Find Intent by Transaction ID
         const { data: intent, error: intentError } = await supabase
             .from('payment_intents')
             .select('*')
-            .eq('id', intentId)
+            .eq('transaction_id', transactionId)
             .single()
 
         if (intentError || !intent) {
-            console.error('[Webhook] Intent not found in DB:', intentId)
-            // It might be a test payment or mismatched DB
+            console.error('[Webhook] Intent not found for transaction:', transactionId)
+            // Ideally we should log this to database
+            await supabase.from('integration_logs').insert({
+                integration_name: 'syncpay_webhook_orphan',
+                event_name: 'orphan_transaction',
+                status: 'warning',
+                payload: payload,
+                created_at: new Date()
+            })
             return res.status(200).json({ error: 'intent_not_found' })
         }
 
-        // 2. Approve Access (Set subscription_active = true)
-        // REPLACED RPC WITH DIRECT SERVICE CALL
+        // 2. Activate Subscription
         try {
             await activateSubscription(
                 supabase,
                 intent.email,
                 intent.plan_slug || 'monthly',
-                payload.id || intentId
+                transactionId
             )
-            console.log('[Webhook] Access Approved for:', intent.email)
+            console.log('[Webhook] Approved:', intent.email)
         } catch (subError) {
             console.error('[Webhook] Activation Error:', subError)
             return res.status(500).json({ error: 'approval_failed' })
         }
 
-        // 3. Notify Utmify (Server-side Purchase Event)
+        // 3. Notify Utmify
         if (process.env.UTMIFY_API_KEY) {
             try {
                 const approvedDate = formatStatsDate(new Date())
-                // Use intent.amount (which is in cents) 
-                // sendUtmifyOrder expects cents.
-
                 await sendUtmifyOrder({
-                    orderId: intentId, // Keep consistent with checkout
+                    orderId: intent.id,
                     status: 'paid',
                     valueInCents: intent.amount || 0,
                     createdAt: formatStatsDate(intent.created_at || new Date()),
                     approvedDate: approvedDate,
                     customer: {
                         email: intent.email,
-                        ip: '127.0.0.1' // Webhook doesn't have user IP
+                        ip: '127.0.0.1'
                     },
-                    utm: {}, // We can't easily get UTMs here unless stored in intent
+                    utm: {},
                     eventName: 'webhook_purchase'
                 })
-                console.log('[Webhook] Utmify Notified')
-            } catch (utmError) {
-                console.error('[Webhook] Utmify Error:', utmError)
-            }
+            } catch (ignore) { }
         }
 
         // 4. Update Intent Status
         await supabase
             .from('payment_intents')
-            .update({
-                status: 'paid',
-                transaction_id: payload.id
-            })
-            .eq('id', intentId)
+            .update({ status: 'paid', updated_at: new Date() })
+            .eq('id', intent.id)
 
         return res.status(200).json({ success: true })
 
