@@ -43,7 +43,7 @@ export const tkViewContent = (contentName) => {
 }
 
 export const tkPurchase = (value, transactionId) => {
-    alert(`[DEBUG] Disparando Purchase!\nValor: ${value}\nID: ${transactionId}`)
+    // alert(`[DEBUG] Disparando Purchase!\nValor: ${value}\nID: ${transactionId}`)
     trackTikTokEvent('Purchase', {
         value: value,
         currency: 'BRL',

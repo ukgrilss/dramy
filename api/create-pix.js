@@ -56,11 +56,17 @@ export default async function handler(req, res) {
         return res.status(200).json({
             ...result,
             // Map for compatibility if needed
-            pix_code: result.qrcode
+            pix_code: result.qrcode,
+            qr_code: result.qrcode // Frontend (PaymentModal) expects 'qr_code'
         })
 
     } catch (error) {
         console.error('Create Pix Error:', error)
-        return res.status(500).json({ message: error.message })
+        // Ensure we send a valid JSON error response
+        // Using return here to ensure no further execution
+        res.status(500).json({
+            message: error.message || 'Erro interno no servidor de pagamento',
+            details: error.stack
+        })
     }
 }

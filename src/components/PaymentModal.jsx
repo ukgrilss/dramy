@@ -53,7 +53,7 @@ export default function PaymentModal({ plan, onClose }) {
                 utmifyPurchase(numericPrice, transactionId || pixData?.id)
             } else {
                 console.error(`[DEBUG] Price Error: ${plan.price}`)
-                alert(`[DEBUG] Erro Preço: ${plan.price}`)
+                // alert(`[DEBUG] Erro Preço: ${plan.price}`)
             }
         } catch (err) {
             console.error("Pixel Error:", err)
@@ -152,6 +152,15 @@ export default function PaymentModal({ plan, onClose }) {
     }, [user, step, pixData])
 
 
+    const generateQRCode = async (text) => {
+        try {
+            const url = await QRCode.toDataURL(text)
+            setQrCodeUrl(url)
+        } catch (err) {
+            console.error("QR Gen Error:", err)
+        }
+    }
+
     // Revert to old generatePix without arguments
     const generatePix = async () => {
         setLoading(true)
@@ -199,10 +208,17 @@ export default function PaymentModal({ plan, onClose }) {
                 })
             })
 
-            const rawPixData = await response.json()
+            const responseText = await response.text()
+            let rawPixData
+            try {
+                rawPixData = JSON.parse(responseText)
+            } catch (e) {
+                console.error("Non-JSON response received:", responseText)
+                throw new Error(`Erro Crítico de Rede (Não-JSON): ${responseText.slice(0, 100)}...`)
+            }
 
             if (!response.ok) {
-                throw new Error(rawPixData.message || 'Erro no servidor')
+                throw new Error(rawPixData.message || rawPixData.error || 'Erro no servidor')
             }
 
             // 🚨 FORCE FAILSAFE: Ensure ID exists even if library failed to normalize
@@ -271,7 +287,7 @@ export default function PaymentModal({ plan, onClose }) {
         if (pixData) {
             console.log("PIX DATA RECEIVED:", pixData)
             if (!pixData.qr_code) {
-                alert("DEBUG: pixData recebido mas qr_code vazio! " + JSON.stringify(pixData))
+                console.warn("DEBUG: pixData recebido mas qr_code vazio! ", pixData)
             }
         }
     }, [pixData])
