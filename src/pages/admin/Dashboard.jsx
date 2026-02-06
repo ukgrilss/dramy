@@ -48,46 +48,30 @@ const Dashboard = () => {
 
             const startDateStr = startDate.toISOString()
 
-            // Fetch users count
+            // 1. CALL RPC for Complex Stats (Renewals, New Subs, MRR)
+            const { data: rpcStats, error: rpcError } = await supabase.rpc('get_dashboard_stats', {
+                p_start_date: startDateStr
+            })
+
+            if (rpcError) console.error("RPC Stats Error:", rpcError)
+
+            // 2. Fetch basic counts that RPC might already provide, but let's double check top-level counts
+            // Total Users (All time)
             const { count: usersCount } = await supabase
                 .from('profiles')
                 .select('*', { count: 'exact', head: true })
 
-            // Fetch active subscriptions count
-            const { count: subsCount } = await supabase
-                .from('subscriptions')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'active')
-
-            // Fetch NEW subscriptions in range
-            const { count: newSubsCount } = await supabase
-                .from('subscriptions')
-                .select('*', { count: 'exact', head: true })
-                .gte('created_at', startDateStr)
-
-            // Fetch content count
+            // Total Content (All time)
             const { count: moviesCount } = await supabase
                 .from('series')
                 .select('*', { count: 'exact', head: true })
 
-            // Fetch Subscriptions grouped by plan (Active items only) to calculate MRR
+            // 3. Plan breakdown (for the chart) - Keep this query as it requires grouping
             const { data: activeSubscriptions } = await supabase
                 .from('subscriptions')
                 .select('plan')
-                .select('plan')
                 .eq('status', 'active')
 
-            // Fetch EXPIRED subscriptions (last 30 days)
-            const thirtyDaysAgo = new Date()
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-            const { count: expiredCount } = await supabase
-                .from('subscriptions')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'expired')
-                .gte('expires_at', thirtyDaysAgo.toISOString())
-
-            // Calculate aggregations
             const planCounts = {
                 'monthly': 0,
                 'annual': 0,
@@ -102,26 +86,33 @@ const Dashboard = () => {
             })
 
             const PRICES = {
-                'monthly': 9.99,    // VIP Mensal - R$ 9,99 (Corrected back to match screenshot)
-                'annual': 59.90,    // Família Anual - R$ 59,90
-                'quarterly': 27.90, // Trimestral - R$ 27,90
-                'lifetime': 97.90   // Vitalício - R$ 97,90
+                'monthly': 9.99,
+                'annual': 59.90,
+                'quarterly': 27.90,
+                'lifetime': 97.90
             }
 
-            const totalMrr =
-                (planCounts.monthly * PRICES.monthly) +
-                (planCounts.annual * (PRICES.annual / 12)) +
-                (planCounts.quarterly * (PRICES.quarterly / 3))
+            // Fallback if RPC fails
+            const mrr = rpcStats?.mrr ||
+                ((planCounts.monthly * PRICES.monthly) +
+                    (planCounts.annual * (PRICES.annual / 12)) +
+                    (planCounts.quarterly * (PRICES.quarterly / 3)))
+
+            // Calculate Churn Rate (Expired in period / (Active + Expired in period)) roughly?
+            // Or just use the hard count from RPC
+            const churnRate = rpcStats?.expired_in_period > 0 && rpcStats?.active_subs > 0
+                ? ((rpcStats.expired_in_period / (rpcStats.active_subs + rpcStats.expired_in_period)) * 100).toFixed(1)
+                : 0
 
             setStats({
                 totalUsers: usersCount || 0,
-                activeSubs: subsCount || 0,
+                activeSubs: rpcStats?.active_subs || 0,
                 totalContent: moviesCount || 0,
-                mrr: totalMrr,
-                newSubs: newSubsCount || 0,
-                renewals: 0,
-                churnRate: 0,
-                expiredSubs: expiredCount || 0,
+                mrr: mrr,
+                newSubs: rpcStats?.new_subs || 0, // CORRECT SPLIT
+                renewals: rpcStats?.renewals || 0, // CORRECT SPLIT
+                churnRate: churnRate,
+                expiredSubs: rpcStats?.expired_in_period || 0,
                 planPerformance: [
                     { name: 'Plano VIP (Mensal)', count: planCounts.monthly, revenue: planCounts.monthly * PRICES.monthly },
                     { name: 'Plano Família (Anual)', count: planCounts.annual, revenue: planCounts.annual * PRICES.annual },
