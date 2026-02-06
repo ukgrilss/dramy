@@ -152,22 +152,7 @@ export default function PaymentModal({ plan, onClose }) {
     }, [user, step, pixData])
 
 
-    const generateQRCode = async (text) => {
-        try {
-            const url = await QRCode.toDataURL(text, {
-                width: 300,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#ffffff'
-                }
-            })
-            setQrCodeUrl(url)
-        } catch (err) {
-            console.error(err)
-        }
-    }
-
+    // Revert to old generatePix without arguments
     const generatePix = async () => {
         setLoading(true)
 
@@ -189,7 +174,34 @@ export default function PaymentModal({ plan, onClose }) {
 
             // Create PIX charge with server-validated amount
             const payerName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Cliente'
-            const rawPixData = await PushinPay.createPixCharge(amount, email, intent_id, payerName)
+
+            // Revert direct fetch call back to PushinPay (which now points to SyncPay service via create-pix.js)
+            // But wait, the previous code used PushinPay.createPixCharge.
+            // AND the user wants to use SyncPay.
+            // My previous change replaced PushinPay.createPixCharge with a fetch to /api/create-pix.
+            // I should KEEP using /api/create-pix because it's cleaner and I control it.
+            // But I will remove the 'cpfToUse' argument and the CPF check.
+
+            const response = await fetch('/api/create-pix', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    value: amount,
+                    webhook_url: window.location.origin + '/api/webhook',
+                    metadata: { intent_id },
+                    payer: {
+                        name: payerName,
+                        email: email || user.email,
+                        // NO DOCUMENT PASSED - Backend will auto-generate
+                    }
+                })
+            })
+
+            const rawPixData = await response.json()
+
+            if (!response.ok) {
+                throw new Error(rawPixData.message || 'Erro no servidor')
+            }
 
             // 🚨 FORCE FAILSAFE: Ensure ID exists even if library failed to normalize
             // ALSO: Store intent_id locally because API might not echo it back correctly
@@ -246,7 +258,7 @@ export default function PaymentModal({ plan, onClose }) {
             }
         } catch (error) {
             console.error('Payment generation error:', error)
-            alert('Erro ao gerar pagamento. Tente novamente.')
+            alert('Erro ao gerar pagamento: ' + error.message)
         } finally {
             setLoading(false)
         }
@@ -438,6 +450,7 @@ export default function PaymentModal({ plan, onClose }) {
                                     <span>Ambiente Seguro e Criptografado</span>
                                 </div>
                             </div>
+
 
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center py-12">
