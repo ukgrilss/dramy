@@ -40,6 +40,36 @@ export const activateSubscription = async (supabase, email, planSlug, transactio
         throw new Error(`User not found for email: ${email}`)
     }
 
+    // 1.5 Ensure Profile Exists (Fix for "Foreign Key Violation")
+    const { data: profileCheck } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', targetUserId)
+        .single()
+
+    if (!profileCheck) {
+        console.warn(`[SubscriptionService] Profile missing for ${targetUserId}. Creating on the fly...`)
+        try {
+            const { error: createProfileError } = await supabase
+                .from('profiles')
+                .insert({
+                    id: targetUserId,
+                    email: email,
+                    subscription_active: false,
+                    // Add default fields if necessary, but usually minimal is fine
+                    updated_at: new Date()
+                })
+
+            if (createProfileError) {
+                console.error('[SubscriptionService] Failed to create missing profile:', createProfileError)
+            } else {
+                console.log('[SubscriptionService] Missing profile created successfully.')
+            }
+        } catch (err) {
+            console.error('[SubscriptionService] Error creating profile:', err)
+        }
+    }
+
     // 2. Get Plan Details
     const { data: planData } = await supabase
         .from('plans')
