@@ -65,7 +65,8 @@ export default async function handler(req, res) {
                 supabase,
                 intent.email,
                 intent.plan_slug || 'monthly',
-                transactionId
+                transactionId,
+                intent.user_id // Pass user_id directly
             )
             console.log('[Webhook] Approved:', intent.email)
         } catch (subError) {

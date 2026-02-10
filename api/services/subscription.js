@@ -8,30 +8,35 @@ const calculateExpiration = (durationDays) => {
     return date.toISOString()
 }
 
-export const activateSubscription = async (supabase, email, planSlug, transactionId) => {
-    console.log(`[SubscriptionService] Activating for ${email} plan ${planSlug}`)
+export const activateSubscription = async (supabase, email, planSlug, transactionId, userId = null) => {
+    console.log(`[SubscriptionService] Activating for ${email} (User ID: ${userId || 'Not provided'}) plan ${planSlug}`)
 
-    // 1. Get User
-    const { data: userData, error: userError } = await supabase
-        .from('profiles') // Check profiles first as it is public usually
-        .select('id')
-        .eq('email', email)
-        .single()
+    // 1. Get User ID (Strategy: Prop > Profile > Auth List)
+    let targetUserId = userId
 
-    // If not in profiles, try auth.users via admin? No, we can't access auth.users directly via client 
-    // unless we use service_role and auth.admin.listUsers usually.
-    // BUT we passed the 'supabase' client which should be initialized with SERVICE_ROLE_KEY.
+    if (!targetUserId) {
+        // Try getting from Profiles (Public/Accessible table usually)
+        const { data: userData } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', email)
+            .single()
 
-    let userId = userData?.id
-
-    if (!userId) {
-        // Try getting from Auth Admin
-        const { data: { users }, error: authError } = await supabase.auth.admin.listUsers()
-        const user = users?.find(u => u.email === email)
-        if (user) userId = user.id
+        if (userData) {
+            targetUserId = userData.id
+        }
     }
 
-    if (!userId) {
+    if (!targetUserId) {
+        // Fallback: Try getting from Auth Admin (Warning: paginated, unreliable for large bases)
+        // Ideally we should use getUserByEmail if available in the client version, but listUsers is what was here.
+        console.warn(`[SubscriptionService] User ID not provided and not found in profiles for ${email}. Falling back to listUsers (unreliable).`)
+        const { data: { users }, error: authError } = await supabase.auth.admin.listUsers()
+        const user = users?.find(u => u.email === email)
+        if (user) targetUserId = user.id
+    }
+
+    if (!targetUserId) {
         throw new Error(`User not found for email: ${email}`)
     }
 
@@ -49,14 +54,14 @@ export const activateSubscription = async (supabase, email, planSlug, transactio
     await supabase
         .from('subscriptions')
         .update({ status: 'canceled', updated_at: new Date() })
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .eq('status', 'active')
 
     // 4. Create new Subscription
     const { error: subError } = await supabase
         .from('subscriptions')
         .insert({
-            user_id: userId,
+            user_id: targetUserId,
             plan: planSlug,
             status: 'active',
             expires_at: expiresAt,
@@ -80,7 +85,7 @@ export const activateSubscription = async (supabase, email, planSlug, transactio
             plan_expira_em: expiresAt
             // updated_at: new Date() // Column might be missing in older schemas
         })
-        .eq('id', userId)
+        .eq('id', targetUserId)
 
     if (profileError) {
         console.error('[SubscriptionService] Failed to update profile:', profileError)

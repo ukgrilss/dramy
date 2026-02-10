@@ -54,6 +54,7 @@ export default async function handler(req, res) {
         if (isPaid) {
             let userEmail = null
             let planSlug = 'monthly' // Default
+            let userId = null
 
             // Try 1: Database Lookups
             if (intent_id) {
@@ -61,6 +62,7 @@ export default async function handler(req, res) {
                 if (data) {
                     userEmail = data.email
                     planSlug = data.plan_slug
+                    userId = data.user_id
                 }
             } else {
                 // Try looking up by transaction_id if intent_id missing
@@ -68,6 +70,7 @@ export default async function handler(req, res) {
                 if (data) {
                     userEmail = data.email
                     planSlug = data.plan_slug
+                    userId = data.user_id
                 }
             }
 
@@ -76,7 +79,7 @@ export default async function handler(req, res) {
 
                 // FORCE APPROVAL via Direct Service
                 try {
-                    await activateSubscription(supabase, userEmail, planSlug, transaction_id)
+                    await activateSubscription(supabase, userEmail, planSlug, transaction_id, userId)
                 } catch (subError) {
                     console.error("Activation Failed:", subError)
                     throw new Error(`Activation Error: ${subError.message}`)
