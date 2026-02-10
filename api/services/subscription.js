@@ -55,9 +55,7 @@ export const activateSubscription = async (supabase, email, planSlug, transactio
                 .insert({
                     id: targetUserId,
                     email: email,
-                    subscription_active: false,
-                    // Add default fields if necessary, but usually minimal is fine
-                    updated_at: new Date()
+                    subscription_active: false
                 })
 
             if (createProfileError) {
